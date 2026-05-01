@@ -23,7 +23,7 @@ Per user's Q1.B decision: `/teamwork-leader` is an orchestrator that COMPOSES wi
 | Final review (optional) | `/opus-review final` | TeamLead invokes; **must check `git rev-parse --is-inside-work-tree` first** — for non-repo workspaces, downgrade to inline review or skip with CEO consent. Do NOT auto-invoke under Auto Mode without explicit CEO opt-in. |
 | Cleanup | `~/CLAUDE.md §清理紀律` | All PMs follow + ProjectClose CleanupGate (Sonnet prompt embeds rule verbatim) |
 | Branch check | `~/.claude/rules/branch-discipline.md` | Discovery + RD PM intake (staging/release/production = HALT; main/master = consent check) |
-| Memory entry | User memory pattern at `~/.claude/projects/<encoded-home>/memory/` (`<encoded-home>` = $HOME with `/` → `-`) | ProjectClose MemoryEntry; format conforms to existing `project_<slug>.md` pattern |
+| Memory entry | User memory pattern at `~/.claude/projects/<encoded-home>/memory/` (see `pmp-lessons-learned.md` §Step 4) | ProjectClose MemoryEntry; format conforms to existing `project_<slug>.md` pattern |
 | Mezzanine | `mezzanine-*` skills + `~/.claude/rules/mezzanine-ui.md` rule | UX PM (with availability fallback to inline rule reading) |
 | Surgical change | `~/.claude/rules/CONTRIBUTING.md` §Surgical Change | All PMs constrained |
 | Verification | `~/.claude/rules/TESTING.md` § Goal-Driven Execution | All PMs follow |

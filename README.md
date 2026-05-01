@@ -4,7 +4,6 @@
 
 [![version](https://img.shields.io/badge/version-0.1.0-blue.svg)](./.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
-[![status](https://img.shields.io/badge/status-not_yet_dogfooded-yellow.svg)](./docs/phase-3-dogfood.md)
 
 ---
 
@@ -71,23 +70,15 @@ TeamLead 會：
 | **Stage Gate** | PM 工作物 | PM dispatch 結束 | PM 自行 closure |
 | **Mini Gate_Forward** | 單一 task 的 `artifacts_touched` | KMR per-task divergence proxy 觸發 | TeamLead 自決（per-instance） |
 
-### Phase 2 — Reserved-Slot Sidecar (RSS)
+### 自動化驗證採樣
 
-PM 回傳必須含 **bounded enum/int meta block**（散文不能 game）。TeamLead 用 `divergence_score` 做 3-band routing：
+PM 回傳含結構化驗證 meta block，TeamLead 依下列訊號自動決定採樣深度：
 
-- **Aligned** (`< 5`) — 不額外採樣
-- **Watch** (`5..10`) — 維持 default sampling，累積信號
-- **Escalate** (`≥ 10`) — 強制 broad sampling
+- **每次 dispatch**：依 PM 自評與實際結果的 divergence 決定 Aligned / Watch / Escalate
+- **跨 stage**：每 PM 維持 rolling 3-stage 信任分級（restricted / standard / trusted），搭配 anti-gaming 偵測
+- **per-task**：必要時觸發 Mini Gate_Forward，僅檢核該 task 的工作物，不消耗 retry 額度
 
-詳見 [`anti-rubber-stamp.md`](./skills/teamwork-leader-workflow/references/anti-rubber-stamp.md) Rule 0。
-
-### Phase 3 — N1 trust_tier × KMR per-task proxy
-
-- **N1**：每 PM 維持 rolling 3-stage 窗口計算 `trust_tier ∈ {restricted, standard, trusted}`，搭配 anti-gaming triggers（constant-emit detection 等）
-- **KMR**：per-task content-conditioned proxy（normalized [0,9]）→ 觸發 Mini Gate_Forward，scope 限該 task 的 artifacts，不消耗 retry slot
-- **Rule 2 6-row precedence**：trust_tier × Rule 0 verdict 交叉決定 sampling tier dominance
-
-詳見 [`stage-runbook.md`](./skills/teamwork-leader-workflow/references/stage-runbook.md) §EXECUTING step 7a + [`anti-rubber-stamp.md`](./skills/teamwork-leader-workflow/references/anti-rubber-stamp.md) Rule 0.5。
+詳見 [`anti-rubber-stamp.md`](./skills/teamwork-leader-workflow/references/anti-rubber-stamp.md)（Rule 0 / 0.5 / 2）+ [`stage-runbook.md`](./skills/teamwork-leader-workflow/references/stage-runbook.md) §EXECUTING step 7a。
 
 ### 變更控制（CCB）
 
@@ -128,8 +119,6 @@ teamwork-leader/
     └── specs/2026-05-01-teamwork-leader-design.md  # 設計 spec（rev v3）
 ```
 
-> **版本說明**：design doc 標 `v3` 是設計文件本身的修訂版本；plugin 對外 release 版本見 `plugin.json` `version` 欄（目前 `0.1.0`）。
-
 ## 配置（CEO_Gate_0 knobs）
 
 在 BudgetProposal 階段，CEO 可調整以下 knob：
@@ -141,25 +130,20 @@ teamwork-leader/
 | `retry_cap_per_step` | 1 | 每 step 重試上限 |
 | `parallel_pm_limit` | 2（hard limit 4） | 平行 PM 上限 |
 | `gate_requirement_mode` | final stage only | Gate_Requirement 觸發時機 |
+| `milestones` | derived from stage decomposition | 每 stage 的 milestone 清單 |
 | `verify_policy` | `default` | 採樣深度（`minimal-per-dispatch` / `default` / `broad`） |
-| `trust_tier_mode` | `enabled` | Phase 3 N1 trust_tier 啟用（disable 走 CCB-Heavy） |
-| `kmr_mode` | `enabled` | Phase 3 KMR 啟用（disable 走 CCB-Heavy） |
+| `trust_tier_mode` | `enabled` | trust_tier 信任分級啟用（disable 走 CCB-Heavy） |
+| `kmr_mode` | `enabled` | per-task Mini Gate 啟用（disable 走 CCB-Heavy） |
 
 完整 knob 表見 [`templates/budget-proposal.md.tpl`](./templates/budget-proposal.md.tpl)。
 
 ## 狀態與限制
 
-**v0.1.0 ship-complete**：
-
-- [x] Phase 1（基礎 stage-gate） + Phase 2（RSS） + Phase 3（N1 + KMR）皆已落地
-- [x] 通過 Final Opus 多 reviewer 審查
-- [x] 11 項修復後通過獨立 Opus 全 review
-
 **已知限制**：
 
-- **尚未 dogfood**：所有 threshold（divergence_score、KMR proxy、trust_tier criteria）皆為 seed values，待真實 project 校準
-- **`verification_self_redundancy` variance prereq 未驗證**：若 PM 在實際 dispatch 中 emit constant value，Trigger 1 anti-gaming 結構性無法 fire（見 [`docs/phase-3-dogfood.md`](./docs/phase-3-dogfood.md) §6）
-- **Phase 4 CGR（Calibration Governance Review）deferred**：需 ≥3 stages clean dogfood data 後才評估
+- **尚未 dogfood**：所有驗證 threshold 皆為 seed values，待真實 project 校準
+- **anti-gaming 觸發前提未驗證**：部分 anti-gaming trigger 依賴 PM 在實際 dispatch 中產生足夠 variance（見 [`docs/phase-3-dogfood.md`](./docs/phase-3-dogfood.md) §6）
+- **CGR（Calibration Governance Review）deferred**：需 ≥3 stages clean dogfood data 後才評估
 
 ## 文件導引
 

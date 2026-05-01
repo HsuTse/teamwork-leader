@@ -71,61 +71,13 @@ Each step has a sub-section below. Mark steps complete as TeamLead progresses.
 
 ## Step 4 — MemoryEntry draft
 
-<!-- Draft `~/.claude/projects/<encoded-home>/memory/project_<slug>.md` per references/pmp-lessons-learned.md §Step 4 format.
-     `<encoded-home>` is Claude Code's URL-encoded form of $HOME — replace each `/` in the absolute home path with `-`,
-     e.g. `/Users/alice` → `-Users-alice`. TeamLead resolves this at runtime via $HOME.
-     Template content goes in this section; CEO reviews at Step 5. -->
+<!-- Draft `~/.claude/projects/<encoded-home>/memory/project_<slug>.md` using the canonical template
+     defined in references/pmp-lessons-learned.md §Step 4 (TeamLead Reads that file before drafting).
+     `<encoded-home>` is Claude Code's URL-encoded form of $HOME ($HOME with `/` → `-`,
+     e.g. `/Users/alice` → `-Users-alice`); TeamLead resolves at runtime.
+     Place the drafted content below; CEO reviews at Step 5. -->
 
-```markdown
----
-name: <project-name>
-description: <one-line, ≤80 chars>
-type: project
----
-
-# <Project Name>
-
-**Period**: <YYYY-MM-DD> → <YYYY-MM-DD> (<N> stages)
-**PMs activated**: <PO, RD, QA, UX + any ad-hoc>
-
-## Goal
-
-<one paragraph from Charter>
-
-## Approach
-
-<one paragraph: stages + key decisions>
-
-## Outcomes
-
-- Value realized: <X yes / Y partial / Z no>
-- Stages: <N> (<all-passed | M with revisions | etc.>)
-- CCB events: <N Light, M Heavy>
-
-## Key decisions
-
-- <decision> — <rationale>
-- <decision> — <rationale>
-
-## RAID outcomes (closed)
-
-- [R] <closed risk + how mitigated>
-- [A] <validated assumption>
-- [I] <resolved issue>
-
-## Lessons compounded
-
-- <top 3 lessons from §Lessons Learned>
-
-## Patterns to apply to future projects
-
-- <generalized pattern 1>
-- <generalized pattern 2>
-
-## Failure modes to watch
-
-- <failure mode taxonomy entries from this project>
-```
+<!-- TeamLead inserts drafted MemoryEntry content here, conforming to the canonical template. -->
 
 ## Step 5 — MemoryEntry CEO review
 

@@ -801,7 +801,7 @@ Per §9.2 / 9.3 / 9.4. Reported in StageReport.
 
 ### 11.9 Memory entry on ProjectClose (NEW per Integration MED-3)
 
-- ProjectClose MemoryEntry step (§5.4) writes `~/.claude/projects/<encoded-home>/memory/project_<slug>.md` (`<encoded-home>` = $HOME with `/` → `-`, e.g. `/Users/alice` → `-Users-alice`)
+- ProjectClose MemoryEntry step (§5.4) writes `~/.claude/projects/<encoded-home>/memory/project_<slug>.md` (`<encoded-home>` per `references/pmp-lessons-learned.md` §Step 4)
 - Append one-liner to `MEMORY.md ## Projects` index
 
 ### 11.10 Exception reporting tier (NEW per PMP LOW-2)
