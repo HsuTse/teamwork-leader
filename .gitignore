@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Local artifacts
+.claude-artifacts/
+*.bak.*
+*.tmp
+
+# Pre-edit hashes from review/fix sessions
+/tmp/*-pre-edit-hashes.txt
