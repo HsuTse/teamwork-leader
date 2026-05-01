@@ -2,7 +2,7 @@
 
 > 多 agent PMP 專案編排：TeamLead 統籌 PO/RD/QA/UX/Ad-hoc 角色 PM，透過 stage-gated 流程與三道驗證閘執行專案。
 
-[![version](https://img.shields.io/badge/version-0.1.1-blue.svg)](./.claude-plugin/plugin.json)
+[![version](https://img.shields.io/badge/version-0.1.2-blue.svg)](./.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 ---
@@ -30,18 +30,22 @@
 
 ## 安裝
 
-```bash
-# 1. clone 到 Claude Code plugins 目錄
-cd ~/.claude/plugins
-git clone https://github.com/HsuTse/teamwork-leader.git
+透過 Claude Code plugin marketplace：
 
-# 2. 在 ~/.claude/settings.json 啟用
-# "enabledPlugins": [..., "teamwork-leader"]
+```bash
+# 1. 註冊此 repo 為 marketplace
+claude plugin marketplace add HsuTse/teamwork-leader
+
+# 2. 安裝 plugin
+claude plugin install teamwork-leader@teamwork-leader
 
 # 3. 重啟 Claude Code session
 ```
 
 啟用後即可在任何 session 使用 `/teamwork-leader` 啟動 TeamLead 角色。
+
+> **更新**：`claude plugin update teamwork-leader@teamwork-leader`
+> **移除**：`claude plugin uninstall teamwork-leader@teamwork-leader`
 
 ## Quick Start
 
