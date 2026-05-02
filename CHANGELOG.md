@@ -2,6 +2,23 @@
 
 All notable changes to the `/teamwork-leader` plugin documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semver per `.claude-plugin/plugin.json`.
 
+## [0.1.5] — 2026-05-03
+
+### Fixed
+
+- **`.claude-plugin/marketplace.json` `source` field** — was `{"source": "url", "url": "https://github.com/HsuTse/teamwork-leader.git"}` (object form), which Claude Code's plugin loader does not understand. Changed to `"./"` (relative path string), matching the canonical pattern used by `anthropic-agent-skills`, `knowledge-work-plugins`, and `rytass-claude-code` marketplaces. Without this fix, `/plugin install teamwork-leader@teamwork-leader` could not resolve the plugin source after marketplace add — install silently produced no cache entry.
+- Removed non-standard `category: "development"` field from plugin entry (not present in any reference marketplace.json; ignored by loader but kept for cleanliness).
+
+### Why
+
+v0.1.4 GH release was distribution-broken: marketplace add succeeded but plugin install could not complete because the loader couldn't parse `source: {object}`. This is a metadata-only fix — no code/agent/skill content changed from v0.1.4. Anyone who attempted v0.1.4 install should `/plugin marketplace update teamwork-leader` then `/plugin install teamwork-leader@teamwork-leader`.
+
+### Migration
+
+- v0.1.4 installations via **symlink workaround** — first remove the symlink (`rm ~/.claude/plugins/cache/teamwork-leader/teamwork-leader/0.1.4`) before running `/plugin marketplace update`, otherwise the loader may resolve the symlinked path instead of the corrected marketplace metadata.
+- v0.1.4 installations via **unsuccessful install attempts** — just run `/plugin marketplace update teamwork-leader` to pick up corrected metadata, then `/plugin install teamwork-leader@teamwork-leader`.
+- All v0.1.4 plugin content (discipline references, agent prompts, skills, runbook references) preserved as-is.
+
 ## [0.1.4] — 2026-05-02
 
 ### Added

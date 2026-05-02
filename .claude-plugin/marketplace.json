@@ -1,20 +1,16 @@
 {
   "name": "teamwork-leader",
-  "metadata": {
-    "description": "Multi-agent PMP project orchestration plugin for Claude Code — single-plugin marketplace."
-  },
   "owner": {
     "name": "HsuTse"
+  },
+  "metadata": {
+    "description": "Multi-agent PMP project orchestration plugin for Claude Code — single-plugin marketplace."
   },
   "plugins": [
     {
       "name": "teamwork-leader",
+      "source": "./",
       "description": "Multi-agent PMP project orchestration. TeamLead composes role PM agents (PO/RD/QA/UX/ad-hoc) through stage-gated workflow with three verification gates (CEO_Gate / Stage Gate / Mini Gate_Forward).",
-      "category": "development",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/HsuTse/teamwork-leader.git"
-      },
       "homepage": "https://github.com/HsuTse/teamwork-leader"
     }
   ]

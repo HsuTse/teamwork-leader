@@ -2,7 +2,7 @@
 
 > 多 agent PMP 專案編排：TeamLead 統籌 PO/RD/QA/UX/Ad-hoc 角色 PM，透過 stage-gated 流程與三道驗證閘執行專案。
 
-[![version](https://img.shields.io/badge/version-0.1.4-blue.svg)](./.claude-plugin/plugin.json)
+[![version](https://img.shields.io/badge/version-0.1.5-blue.svg)](./.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 ---

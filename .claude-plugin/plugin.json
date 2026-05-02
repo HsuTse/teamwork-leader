@@ -1,6 +1,6 @@
 {
   "name": "teamwork-leader",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Multi-agent project orchestration. TeamLead composes role PM agents (PO/RD/QA/UX/ad-hoc) through stage-gated PMP workflow with Forward/Human/Requirement gates.",
   "author": {
     "name": "HsuTse"
