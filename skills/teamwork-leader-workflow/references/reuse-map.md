@@ -12,7 +12,7 @@ Per user's Q1.B decision: `/teamwork-leader` is an orchestrator that COMPOSES wi
 | TeamFormation | TeamLead | Built-in logic |
 | BudgetProposal | `templates/budget-proposal.md.tpl` | Local template |
 | Planning | `superpowers:writing-plans` rubric | **Inline rubric** — PMs follow structure (Discovery → File Structure → Bite-Sized Tasks → No Placeholders → Self-Review) but emit plans for TeamLead. **DO NOT** trigger writing-plans' executing-plans handoff. |
-| PlanAudit | Plugin-internal Opus dispatch prompt (Planning Cadence rubric — derived from host-level auto-review-cadence rules if present, otherwise plugin-bundled defaults) | TeamLead replicates rubric in Opus dispatch prompt (parameterization, not duplication) |
+| PlanAudit | Plugin-internal Opus dispatch prompt (Planning Cadence rubric — derived from host-level auto-review-cadence rules if present, otherwise plugin-bundled defaults) dispatched via Agent tool with `model: opus`, NOT via host `/opus-review final` skill (preserves v0.1.4 self-contained portability ethos; Rule 7 enforcement requires plugin-controlled dispatch to guarantee the anti-self-skip blacklist block is included) | TeamLead replicates rubric in Opus dispatch prompt (parameterization, not duplication); Rule 7 `suggested_fix` structured-field validation runs post-receive per `references/plan-audit-rubric.md` |
 | Execution iteration | `superpowers:subagent-driven-development` **PATTERN** | TeamLead manually replicates the per-task dispatch + step-review pattern (DO NOT load the skill itself — it's FORBIDDEN per §6.1) |
 | Step-review | `auto-review-cadence.md` §Coding Cadence rubric | TeamLead dispatches Sonnet per step |
 | Gate_Forward | Sonnet trace + structured classifier | QA PM dispatches |

@@ -271,6 +271,63 @@ CEO's recourse at any gate:
 - **PM marks own RAID-I as severity:low** when impact looks higher → TeamLead overrides
 - **TeamLead chooses easy verify command repeatedly** (avoiding hard ones) → CEO can spot in `## Self-Audit` rotation log; should adjust
 
+## Rule 7 — Plan-audit anti-self-skip (Phase 4 candidate)
+
+This rule applies exclusively to TeamLead's **plugin-internal Opus reviewer** dispatched during §PLAN_AUDIT via `Agent` tool with `model: opus`. It does NOT apply to the host `/opus-review final` skill (different dispatch context, different enforcement surface). Rule 7 preserves the v0.1.4 self-contained portability ethos: all enforcement logic lives within this plugin.
+
+**Problem addressed**: Reviewers can flag a real issue, then suggest `"skip"` / `"none"` / `"no change"` as the `suggested_fix` — effectively rubber-stamping. Rules 0–6 protect EXECUTING-phase PM dispatches; PLAN_AUDIT-phase Opus reviewers had no dedicated self-skip guard. Rule 7 closes this gap using structured-field validation only (NOT prose regex, which carries false-positive risk on legitimate prose like "skip migration if X").
+
+Verbatim dispatch prompt + structured-field validation procedure live in `references/plan-audit-rubric.md`. Runtime hookup lives in `references/stage-runbook.md` §PLAN_AUDIT.
+
+### Enforcement 1 — Dispatch prompt blacklist
+
+The Opus reviewer dispatch prompt opens with an explicit blacklist of self-skip phrases. The blacklist covers all values that signal reviewer self-suppression:
+
+- `"skip"` — literally skip; reviewer declining to hold the plan accountable
+- `"cosmetic only"` — minimizing a real issue to avoid demanding substantive rework
+- `"minimal-diff"` — inappropriate reuse of an implementation-phase concept in a review context
+- `"none"` — no fix at all, logged as an issue anyway
+- `"no change"` — same semantic as `"none"`, different wording
+
+These phrases are blacklisted **only in the `suggested_fix` structured field** (see Enforcement 2). They remain valid in prose reasoning.
+
+### Enforcement 2 — Structured `suggested_fix` field must be actionable
+
+Every issue logged in the reviewer's structured output must include a `suggested_fix` field. If the reviewer cannot produce an actionable fix, it **must NOT log the issue at all** — no-fix means no-issue.
+
+Literal detection targets (exact string match on `suggested_fix` field value, case-insensitive, trimmed):
+- `"skip"`, `"none"`, `"no change"`, `"cosmetic only"`, `"minimal-diff"`
+
+A non-actionable `suggested_fix` after 1 retry → escalate CEO per §Post-receive guard (Enforcement 4). See `references/plan-audit-rubric.md` §Structured-field validation for the exact detection procedure.
+
+### Enforcement 3 — Verdict aggregation: all issues surface to CEO
+
+All logged issues (those with actionable `suggested_fix` values) are surfaced to CEO regardless of severity. The reviewer flags issues; CEO decides importance — reviewer never auto-suppresses by severity (that is the form of self-skip this rule closes). There is no severity threshold below which an issue is silently dropped.
+
+This rule intentionally differs from EXECUTING-phase PM dispatches (where TeamLead overrides severity classification but does not suppress issues from CEO). In PLAN_AUDIT, the reviewer itself must not pre-filter.
+
+### Enforcement 4 — Post-receive guard: 1-retry on detection
+
+On receiving Opus reviewer output for a PLAN_AUDIT dispatch:
+
+1. Parse all `suggested_fix` fields from the structured output.
+2. If **any** match the blacklist (Enforcement 1) → re-dispatch Opus reviewer ONCE with corrective prompt (see `references/plan-audit-rubric.md` §Post-receive guard).
+3. If detection persists after the 1 retry → escalate CEO with `## Exception` populated: `Type: plan_audit_self_skip_persistent`.
+4. Log `plan_audit_self_skip_detected: true | false | null` in `audit-trail.jsonl` per `references/progress-md-schema.md` §Audit-trail sidecar.
+
+Detection also fires when the `suggested_fix` field is absent from an issue object (treated as detection-equivalent — closes the field-omission circumvention gap; see `references/plan-audit-rubric.md` §Detection procedure step 2.5).
+
+The 1-retry limit prevents cascading escalation while still closing the self-skip loop. CEO arbitrates persistent cases.
+
+### Cross-references
+
+- `references/plan-audit-rubric.md` — verbatim dispatch prompt blacklist + structured-field validation procedure
+- `references/stage-runbook.md` §PLAN_AUDIT — runtime hookup (steps 3.5 and verdict routing update)
+- `references/progress-md-schema.md` §Audit-trail sidecar — `plan_audit_self_skip_detected` field schema
+- `templates/budget-proposal.md.tpl` §Knobs — `plan_audit_anti_self_skip_mode` knob
+
+---
+
 ## Why this discipline matters
 
 User's prior incident pattern (referenced in design doc §3 motivation):

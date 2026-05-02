@@ -2,7 +2,7 @@
 
 > 多 agent PMP 專案編排：TeamLead 統籌 PO/RD/QA/UX/Ad-hoc 角色 PM，透過 stage-gated 流程與三道驗證閘執行專案。
 
-[![version](https://img.shields.io/badge/version-0.1.5-blue.svg)](./.claude-plugin/plugin.json)
+[![version](https://img.shields.io/badge/version-0.1.6-blue.svg)](./.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 ---
@@ -73,6 +73,29 @@ TeamLead 會：
 | **CEO_Gate_N** | 整 stage | 每 stage 收尾 | CEO（人類）批准 |
 | **Stage Gate** | PM 工作物 | PM dispatch 結束 | PM 自行 closure |
 | **Mini Gate_Forward** | 單一 task 的 `artifacts_touched` | KMR per-task divergence proxy 觸發 | TeamLead 自決（per-instance） |
+
+### Anti-self-skip（v0.1.6）
+
+PLAN_AUDIT 階段的 Opus 審查者有一個特定風險：可以記錄一個真實問題，然後在 `suggested_fix` 欄位填寫 `"skip"` / `"none"` / `"no change"` — 等於 rubber-stamp 了計劃卻留下表面上的稽查記錄。Rule 7 專門關閉這個缺口。
+
+**適用範圍**：TeamLead 透過 `Agent` tool 以 `model: opus` 派遣的 plugin-internal Opus 審查者（PLAN_AUDIT 階段）。**不適用**於 host `/opus-review final` skill — 該 skill 由 CEO 手動呼叫，不在 TeamLead dispatch loop 內，無法注入 Rule 7 blacklist block。
+
+**觸發時機**：僅在 PLAN_AUDIT 狀態。EXECUTING 階段的 PM dispatch 由 Rules 0–6 保護（不同角色、不同 enforcement surface）。
+
+**4 項 Enforcement**：
+
+| Enforcement | 內容 |
+|---|---|
+| 1. Dispatch prompt blacklist | Opus dispatch 開頭強制注入 blacklist block：`"skip"` / `"none"` / `"no change"` / `"cosmetic only"` / `"minimal-diff"` 禁止作為 `suggested_fix` 值 |
+| 2. Structured-field validation | `suggested_fix` 欄位必須可操作；字面值匹配 blacklist → 該 issue 視為未記錄（no-fix means no-issue）|
+| 3. 全部 issue 上浮 CEO | 所有有效 issue（`suggested_fix` 可操作者）不分嚴重程度一律上浮 CEO；審查者不得依 severity 自行過濾 |
+| 4. 1-retry post-receive guard | 偵測到 blacklist 值 → 重派 Opus 一次（corrective prompt）；再次偵測 → ESCALATED with `plan_audit_self_skip_persistent` |
+
+**Knob 設定**：`plan_audit_anti_self_skip_mode` (預設 `strict`)；`warn` / `off` 需 CCB-Heavy。
+
+**稽查欄位**：`plan_audit_self_skip_detected: true | false | null` 記錄於 `audit-trail.jsonl`。
+
+詳見 [`references/plan-audit-rubric.md`](./skills/teamwork-leader-workflow/references/plan-audit-rubric.md)（verbatim dispatch prompt + validation procedure）及 [`references/anti-rubber-stamp.md`](./skills/teamwork-leader-workflow/references/anti-rubber-stamp.md) §Rule 7。
 
 ### 自動化驗證採樣
 

@@ -2,6 +2,32 @@
 
 All notable changes to the `/teamwork-leader` plugin documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semver per `.claude-plugin/plugin.json`.
 
+## [0.1.6] — 2026-05-03
+
+### Added
+
+- **Rule 7 in `references/anti-rubber-stamp.md`** — Plan-audit anti-self-skip rule with 4 enforcements: (1) dispatch prompt blacklist of self-skip phrases, (2) `suggested_fix` structured-field actionability requirement, (3) all logged issues surfaced to CEO regardless of severity, (4) 1-retry post-receive guard with escalation on persistence.
+- **New `references/plan-audit-rubric.md`** — Standalone Rule 7 rubric (~123 lines): §Scope (TeamLead-dispatched Opus, NOT host `/opus-review final`), §Dispatch prompt blacklist (verbatim block), §Structured-field validation (detection procedure + scope limit to structured field only), §Verdict aggregation, §Post-receive guard (corrective re-dispatch prompt + escalation path), §Cross-references.
+- **`plan_audit_self_skip_detected: boolean | null` field** in `audit-trail.jsonl` schema (`references/progress-md-schema.md` §Audit-trail sidecar) — `true` if Rule 7 fired detection this PLAN_AUDIT session; `false` if Rule 7 ran clean; `null` if Rule 7 did not run (single-plan mode without `suggested_fix` emission, OR `plan_audit_anti_self_skip_mode == off`).
+- **`plan_audit_anti_self_skip_mode` knob** in `templates/budget-proposal.md.tpl` §Knobs — `strict` (default, full Rule 7 enforcement), `warn` (validate + log but no re-dispatch / escalate), `off` (skip Rule 7; field logs `null`). Both `warn` and `off` require CCB-Heavy.
+
+### Changed
+
+- **`references/stage-runbook.md` §PLAN_AUDIT rewritten** — step 3 now embeds Rule 7 dispatch prompt blacklist cross-ref before plan content; new step 3.5 (post-receive Rule 7 validation: parse `suggested_fix` fields, detect blacklisted values, on detection re-dispatch ONCE with corrective prompt); step 4 verdict routing updated to filter out issues with non-actionable `suggested_fix` before surfacing to CEO; exit condition updated to include `plan_audit_self_skip_persistent` escalation path.
+- **`references/three-gates.md` §JSON parse failure** — added cross-ref note: PLAN_AUDIT has additional Rule 7 anti-self-skip protection; consult `references/plan-audit-rubric.md` for plan-audit-specific reviewer dispatch protocol.
+- **`references/reuse-map.md` PlanAudit row** — explicit clarification that PlanAudit uses Agent tool with `model: opus`, NOT host `/opus-review final` skill, with rationale: portability ethos + Rule 7 enforcement requires plugin-controlled dispatch.
+- **README.md** — version badge bumped 0.1.5 → 0.1.6; new §Anti-self-skip (v0.1.6) section after §三道驗證閘 documenting Rule 7 scope (TeamLead-dispatched Opus only, NOT host `/opus-review final`), 4-enforcement table, knob configuration, and cross-refs to `plan-audit-rubric.md` / `anti-rubber-stamp.md` §Rule 7.
+
+### Why
+
+Post-v0.1.5 design observation: Rules 0/0.5/2 protect EXECUTING-phase PM dispatches, but PLAN_AUDIT-phase Opus reviewers had no dedicated self-skip guard. A reviewer can flag a real plan issue, then suggest `"skip"` / `"none"` / `"no change"` / `"cosmetic only"` / `"minimal-diff"` as `suggested_fix` — effectively rubber-stamping the issue while appearing to log it. Rule 7 closes this gap with structured-field validation (NOT prose regex, which carries false-positive risk on legitimate text like "skip migration if X"). The 1-retry design prevents cascading escalation; CEO arbitrates only on persistent failures.
+
+### Migration
+
+- Legacy PLAN_AUDIT runs (pre-v0.1.6) have `plan_audit_self_skip_detected: null` in any existing audit-trail.jsonl rows (no retroactive backfill; follows `kmr_*` pattern precedent).
+- Post-v0.1.6: Rule 7 enforcement is mandatory (`plan_audit_anti_self_skip_mode: strict` default) unless CCB-Heavy sets `warn` or `off`.
+- In-flight v0.1.5 projects upgrading mid-stage: no PROGRESS.md migration required; Rule 7 takes effect on the next PLAN_AUDIT dispatch. Existing audit-trail.jsonl rows lack the field — this is treated as `null` (legacy).
+
 ## [0.1.5] — 2026-05-03
 
 ### Fixed
