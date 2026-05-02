@@ -256,6 +256,11 @@ Field constraints:
 - `kmr_verdict` (Phase 3 T12) — `"PASS" | "PARTIAL" | "FAIL" | "INCONCLUSIVE"` (Mini Gate_Forward classifier verdict) or `null` if not fired
 - `kmr_root_cause` (Phase 3 T12) — `"code_bug" | "spec_ambiguity" | "spec_gap" | "environmental" | "inconclusive"` from Mini Gate classifier when verdict ≠ PASS; `null` otherwise
 - `kmr_skipped` (Phase 3 migration) — boolean: `true` if dispatch lacked a `pre-task-estimates.jsonl` entry (legacy pre-rollout dispatch carried into a post-rollout stage); `false` for normal dispatches; `null` if KMR mode is disabled per `kmr_mode` knob
+- `plan_audit_self_skip_detected` (v0.1.6) — `boolean | null`: Rule 7 outcome for PLAN_AUDIT-phase Opus reviewer dispatches. Follows the `kmr_*` pattern (structured field, not `notes`):
+  - `true` — Rule 7 fired this PLAN_AUDIT session: at least one `suggested_fix` blacklisted value was detected in the reviewer's structured output
+  - `false` — Rule 7 ran but no detection (clean pass — all `suggested_fix` values were actionable, or no issues were logged)
+  - `null` — Rule 7 did not run: single-plan mode where no `suggested_fix` field was emitted by the reviewer, OR `plan_audit_anti_self_skip_mode == off` per `templates/budget-proposal.md.tpl` §Knobs
+  - For non-PLAN_AUDIT dispatches (EXECUTING-phase RD/QA/PO/UX/ad-hoc PM dispatches), write `null` — Rule 7 is scoped to PLAN_AUDIT only.
 - `schema_validation_status` (v0.1.3) — enum `"pass" | "rejected_and_retried" | "rejected_and_escalated" | null`: persists the outcome of TeamLead's parse-time validation against the 11 mandatory fields (per `anti-rubber-stamp.md` §Mandatory rejection criteria):
   - `pass` — first attempt parsed cleanly with all 11 fields present
   - `rejected_and_retried` — first attempt INCOMPLETE → re-dispatched with schema reminder → second attempt PASS (this final row records the successful retry; the failed attempt is not separately persisted to keep audit-trail per-task 1:1 with `pre-task-estimates.jsonl`)

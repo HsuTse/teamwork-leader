@@ -99,16 +99,19 @@
 3. **Dispatch single Opus reviewer** (per `auto-review-cadence.md §Planning Cadence`):
    - `subagent_type: general-purpose`, `model: opus`
    - Embed all PM plans + Charter + Budget Baseline as context
+   - **Rule 7 (anti-self-skip)**: open the dispatch prompt with the verbatim blacklist block from `references/plan-audit-rubric.md` §Dispatch prompt blacklist BEFORE embedding plan content. This applies regardless of `plan_candidates` mode. See `references/anti-rubber-stamp.md` §Rule 7 for design rationale.
+
+   **Dispatch prompt ordering (Rule 7)**: the prompt MUST be ordered: (1) Rule 7 verbatim blacklist block from `references/plan-audit-rubric.md` §Dispatch prompt blacklist, (2) the 6-criterion rubric, (3) plan content + reviewer-context. Rule 7 block always comes first to anchor the constraint before any other instruction (recency-bias mitigation).
 
    **Mode branches by `plan_candidates` presence** (Phase 2 T5 — see `dispatch-header.md` §`plan_candidates` block):
 
    - **Single-plan mode** (no PM emitted `plan_candidates`, OR K=1 fall-through per `dispatch-header.md` §`plan_candidates` block degenerate cases):
      - Use the Opus rubric from `auto-review-cadence.md §Planning Cadence` verbatim
-     - Output schema: `verdict: APPROVED | APPROVED_WITH_REVISIONS | REJECTED` + issues list
+     - Output schema: `verdict: APPROVED | APPROVED_WITH_REVISIONS | REJECTED` + issues list (each issue must include `suggested_fix`)
      - For K=1 fall-through: treat the singleton candidate's `summary` + `dod` + `cost_estimate_kT` as the single plan; ignore the `plan_candidates` array wrapper
 
    - **Candidate-set mode** (RD PM emitted `plan_candidates: [A, B, C]`, max K=3):
-     - Opus runs the 6-criterion rubric **per candidate** independently (each candidate gets its own verdict + issues list)
+     - Opus runs the 6-criterion rubric **per candidate** independently (each candidate gets its own verdict + issues list; every issue must include `suggested_fix`)
      - Then Opus computes `selector_score` per candidate:
        ```
        selector_score = (blocker × 4 + important × 2 + minor × 1)
@@ -132,6 +135,21 @@
        ```
      - `selected_id: null` if all candidates REJECTED (treated as overall REJECTED).
 
+3.5. **Rule 7 post-receive validation** (per `references/plan-audit-rubric.md` §Structured-field validation):
+
+   After receiving Opus reviewer output, before routing to step 4:
+
+   a. Parse all `suggested_fix` field values from structured issue objects.
+   b. Run detection per `references/plan-audit-rubric.md` §Detection procedure (structured field only — NOT prose regex).
+   c. **If any blacklisted `suggested_fix` detected**:
+      - Log `plan_audit_self_skip_detected: true` in audit-trail.jsonl.
+      - Re-dispatch Opus reviewer ONCE with the corrective prompt from `references/plan-audit-rubric.md` §Post-receive guard.
+      - If detection persists after 1 retry → transition to §ESCALATED with `Type: plan_audit_self_skip_persistent`. Do NOT proceed to step 4.
+   d. **If no detection** → log `plan_audit_self_skip_detected: false`. Proceed to step 4.
+   e. **Null case** → log `plan_audit_self_skip_detected: null` if `plan_audit_anti_self_skip_mode == off` (per `templates/budget-proposal.md.tpl` §Knobs), or single-plan mode where no `suggested_fix` field was emitted.
+
+   Issues with non-actionable `suggested_fix` values are dropped from the verdict surfaced to CEO (no-fix means no-issue). All remaining issues are surfaced regardless of severity (per `references/anti-rubber-stamp.md` §Rule 7 Enforcement 3).
+
 4. **On verdict**:
    - **Single-plan mode**:
      - `APPROVED` → proceed to EXECUTING
@@ -143,7 +161,7 @@
      - `REJECTED` (selected_id == null OR all candidates REJECTED) → re-dispatch RD PM ONCE with per-candidate feedback (max 1 retry per cadence rule); second REJECTED → ESCALATED.
 5. **Run §Anti-rubber-stamp 5-rule checklist** on Opus's claims (yes — even Opus can hallucinate). In candidate-set mode, sample at least 1 of the per-candidate verdicts for verification (don't just trust the aggregate `selected_id`).
 
-**Exit to**: EXECUTING (on APPROVED) | ESCALATED (on retry-exhausted REJECTED).
+**Exit to**: EXECUTING (on APPROVED) | ESCALATED (on retry-exhausted REJECTED or Rule 7 persistent detection).
 
 ---
 

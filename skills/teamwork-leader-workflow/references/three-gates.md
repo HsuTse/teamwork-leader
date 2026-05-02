@@ -32,6 +32,8 @@ TeamLead routes failures based on `root_cause` → matching PM. **Prose interpre
 
 This unifies with `dispatch-header.md` §Return contract (same INCOMPLETE → re-dispatch → escalate pattern).
 
+> **PLAN_AUDIT additional protection**: the PLAN_AUDIT phase has Rule 7 anti-self-skip enforcement beyond JSON parse failure handling. Rule 7 validates `suggested_fix` structured field values and prevents reviewer self-suppression. See `references/plan-audit-rubric.md` for the verbatim dispatch prompt blacklist and structured-field validation procedure; see `references/anti-rubber-stamp.md` §Rule 7 for design rationale. Consult `references/plan-audit-rubric.md` for any plan-audit-specific reviewer dispatch protocol questions.
+
 ## Sequencing under failure
 
 Gates run sequentially: Forward → Human → Requirement. **No skipping**.
