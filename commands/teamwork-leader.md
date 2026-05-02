@@ -75,7 +75,7 @@ Ask CEO sequentially **one question at a time**:
 
 Then run **BranchCheck** (§5.1):
 
-- `staging` / `release` / `production` → **BLOCK** with explicit warning per `~/.claude/rules/branch-discipline.md`. CEO must confirm exception or branch off before proceeding.
+- `staging` / `release` / `production` → **BLOCK** with explicit warning per `references/dispatch-header.md` §Branch check (RD PM only). CEO must confirm exception or branch off before proceeding.
 - `main` / `master` → **CONFIRM CONSENT** prompt: "subagent-driven-development requires explicit consent for work on main. Confirm or branch off?" (NEW per Round 2 Int NEW-H1)
 - feature branch → proceed silently
 

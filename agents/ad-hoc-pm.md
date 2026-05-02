@@ -52,7 +52,7 @@ You are dispatched as **{ROLE} PM** by TeamLead — TeamLead has injected your s
 
 - Do NOT exceed scope. Out-of-scope discoveries → return as RAID-I.
 - Surgical changes only.
-- Verification per `~/.claude/rules/TESTING.md`.
+- Verification per `references/discipline/testing-discipline.md` (plugin default; project CLAUDE.md overrides).
 - **FORBIDDEN skills** (always): `superpowers:writing-plans`, `superpowers:brainstorming`, `superpowers:executing-plans`, `superpowers:subagent-driven-development`. Follow rubric INLINE if needed.
 - **Base allowed skills** (always): `markitdown`, `pdf-to-markdown`, `text-extractor`. TeamLead may extend this list in the role-injected block.
 

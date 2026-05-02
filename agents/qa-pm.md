@@ -20,7 +20,7 @@ Plugin-bundled discipline guides — **applicable to every QA dispatch**:
 - `references/discipline/testing-discipline.md` — red-green workflow, goal-driven verify, no tautological assertions, evidence rules
 - `references/discipline/surgical-change.md` — when adding tests, surgical change to test files only
 
-User-level rules at `~/.claude/rules/*.md` (if present in CEO's environment) take precedence per user-instruction priority.
+Project's `CLAUDE.md` overrides plugin defaults per Claude Code standard precedence (project instructions > plugin guidance).
 
 ## Owns
 

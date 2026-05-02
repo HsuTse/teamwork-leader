@@ -44,8 +44,8 @@ You will self-report `dod_status: met | partial | missed` in the return contract
 ### Constraints
 
 1. **Do NOT exceed scope.** Out-of-scope discoveries → return as RAID-I issue, do not act.
-2. **Surgical changes only** (per `~/.claude/rules/CONTRIBUTING.md` §Surgical Change).
-3. **Verification per `~/.claude/rules/TESTING.md`** — provide command + key output evidence.
+2. **Surgical changes only** (per `references/discipline/surgical-change.md`).
+3. **Verification per `references/discipline/testing-discipline.md`** — provide command + key output evidence.
 
 ### Skill usage rules
 
@@ -64,7 +64,7 @@ If you need their guidance, follow their rubric **INLINE** (read the rubric stru
 - `playwright-cli`, `chrome-devtools-batch-scraper` (QA PM only)
 - `markitdown`, `pdf-to-markdown`, `text-extractor` (any PM)
 
-**Skill availability check**: before invoking, verify the skill is listed in available-skills system-reminder. If missing, fall back to inline reading of `~/.claude/rules/{relevant-rule}.md`.
+**Skill availability check**: before invoking, verify the skill is listed in available-skills system-reminder. If missing, fall back to inline reading of plugin's `references/discipline/{relevant-discipline}.md`.
 
 ### Sub-agent dispatch rules
 

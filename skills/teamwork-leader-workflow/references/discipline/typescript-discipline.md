@@ -31,4 +31,4 @@ Applicable to: **RD PM** (TypeScript projects only)
 
 ## Override
 
-User-level rules at `~/.claude/rules/CONTRIBUTING.md` (if present) take precedence per user-instruction priority. This file is plugin's portable default for users without that file.
+This file is the plugin's portable default for TypeScript projects. If your team allows `any` or has different TypeScript conventions, document overrides in your project's `CLAUDE.md` — agents follow project CLAUDE.md ahead of plugin defaults per Claude Code's standard precedence. Skip entirely on non-TypeScript projects.

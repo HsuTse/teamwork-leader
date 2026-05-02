@@ -100,7 +100,9 @@ Plugin 自帶 `references/discipline/*.md` 6 份 portable defaults，作為各 P
 - **UX PM**：styling-discipline / mezzanine-discipline / surgical-change
 - **PO PM**：simplicity / surgical-change
 
-每份 discipline 檔尾標註：若 CEO 環境有 `~/.claude/rules/<相應檔案>.md`，user instruction 優先。Plugin 不依賴外部 user rules 即可運作；個人化 override 透過 user rules 自然 propagate。
+每份 discipline 檔是 plugin 的 portable default。專案的 `CLAUDE.md` 若有不同 convention，依 Claude Code standard precedence（project instructions > plugin guidance）自動優先 — 此 override 不依賴 plugin 內建 loading logic，而是由 Claude Code 的 instruction priority 機制處理。
+
+Mezzanine / TypeScript discipline 在非適用專案自動 skip（檔尾標註）。
 
 詳見 [`skills/teamwork-leader-workflow/references/discipline/`](./skills/teamwork-leader-workflow/references/discipline/)。
 

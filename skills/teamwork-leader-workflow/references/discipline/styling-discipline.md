@@ -82,4 +82,4 @@ Applicable to: **UX PM**, **RD PM** (when touching CSS / SCSS / inline styles)
 
 ## Override
 
-User-level rules at `~/.claude/rules/styling-discipline.md` (if present) take precedence per user-instruction priority. This file is plugin's portable default for users without that file.
+This file is the plugin's portable default. If your team has different styling conventions, document overrides in your project's `CLAUDE.md` — agents follow project CLAUDE.md ahead of plugin defaults per Claude Code's standard precedence.

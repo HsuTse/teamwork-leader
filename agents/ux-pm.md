@@ -23,7 +23,7 @@ Plugin-bundled discipline guides — **applicable to every UX dispatch**:
 - `references/discipline/mezzanine-discipline.md` — **Mezzanine projects only**（API verification、`readonly` 小寫、Button size GeneralSize、FormField 對齊、PageHeader 不包 ContentHeader）
 - `references/discipline/surgical-change.md` — when proposing constraints to RD, scope to dispatch's stated UI surface only
 
-User-level rules at `~/.claude/rules/*.md` (if present in CEO's environment) take precedence per user-instruction priority.
+Project's `CLAUDE.md` overrides plugin defaults per Claude Code standard precedence (project instructions > plugin guidance).
 
 ## Owns
 

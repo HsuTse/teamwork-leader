@@ -182,7 +182,7 @@ This state implements the **subagent-driven-development PATTERN** (per `reuse-ma
    - Update Last Action with `[TRUSTED]` if all 5 anti-rubber-stamp rules passed; else `[CLAIMED]`.
 6. **Dispatch Sonnet step-reviewer** (per `auto-review-cadence.md §Coding Cadence`):
    - `subagent_type: general-purpose`, `model: sonnet`
-   - Inputs: task scope, RD's diff, surgical-change rubric from `~/.claude/rules/CONTRIBUTING.md`
+   - Inputs: task scope, RD's diff, surgical-change rubric from `references/discipline/surgical-change.md`
    - Output: `verdict: PASS | PASS_WITH_MINOR | FAIL`
 7. **On step-reviewer verdict**:
    - `PASS` → mark task complete in tasks.md (RD writes), continue loop

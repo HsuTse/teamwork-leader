@@ -20,7 +20,7 @@ Plugin-bundled discipline guides — **applicable to every PO dispatch**:
 - `references/discipline/simplicity.md` — when drafting / updating spec, reject phantom features and over-specification
 - `references/discipline/surgical-change.md` — spec edits scoped to dispatch's stated docs files only
 
-User-level rules at `~/.claude/rules/*.md` (if present in CEO's environment) take precedence per user-instruction priority.
+Project's `CLAUDE.md` overrides plugin defaults per Claude Code standard precedence (project instructions > plugin guidance).
 
 ## Owns
 

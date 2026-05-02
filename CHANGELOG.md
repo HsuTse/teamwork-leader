@@ -6,23 +6,24 @@ All notable changes to the `/teamwork-leader` plugin documented here. Format fol
 
 ### Added
 
-- **`references/discipline/` directory** with 6 portable defaults — surgical-change / simplicity / typescript-discipline / testing-discipline / styling-discipline / mezzanine-discipline. Each has user-rule override footer.
+- **`references/discipline/` directory** with 6 portable defaults — surgical-change / simplicity / typescript-discipline / testing-discipline / styling-discipline / mezzanine-discipline. Each has §Override footer pointing to project CLAUDE.md.
 - **§Discipline references** section in 4 PM agents (rd-pm / qa-pm / ux-pm / po-pm) wiring the applicable subset.
 - **§Role discipline references** section in README.
 
 ### Changed
 
-- PM agents previously referenced `~/.claude/rules/*.md` (host-machine paths) — these are dangling for users without those rules. Replaced with plugin-internal `references/discipline/*.md` paths.
-- ux-pm.md skill fallback table now points to `references/discipline/mezzanine-discipline.md` instead of `~/.claude/rules/mezzanine-ui.md`.
+- All `~/.claude/rules/*.md` references swept from plugin-internal files (PM agents + dispatch-header.md + stage-runbook.md + three-gates.md + reuse-map.md + pmp-lessons-learned.md + ad-hoc-pm.md + commands/teamwork-leader.md). Plugin now operates without dependency on host `~/.claude/rules/`.
+- mezzanine-discipline.md removed user-personal references (`mezzanine.rytass.com` → "project's Storybook URL"; `admin-components` → "project's internal Mezzanine wrapper-package").
+- Override mechanism reframed honestly: project `CLAUDE.md` overrides plugin defaults per Claude Code standard precedence (project instructions > plugin guidance) — this is Claude Code's built-in mechanism, not custom plugin loading logic.
 
 ### Why
 
-Plugin distribution to other users via marketplace requires self-contained defaults. v0.1.4 makes the plugin work standalone (no dependency on host's `~/.claude/rules/`) while preserving user-instruction priority — if CEO's environment has matching user rules, those take precedence.
+Plugin distribution to other users via marketplace requires self-contained defaults. v0.1.4 makes the plugin work standalone with no dangling references to host-machine files. Project-level customization works through Claude Code's existing instruction-priority mechanism, not via plugin-specific override logic (avoids implementing fragile loading paths).
 
 ### Migration
 
-- Existing user (HsuTse) unaffected — `~/.claude/rules/*.md` still loaded globally for non-plugin work; plugin-bundled defaults activate when user rules absent.
-- New users get plugin-bundled defaults out of the box.
+- HsuTse's environment unaffected — host `~/.claude/rules/*.md` continues to load globally for non-plugin work and overrides plugin defaults via project CLAUDE.md when relevant.
+- New users get plugin-bundled defaults out of the box; can override via their own project `CLAUDE.md`.
 
 
 

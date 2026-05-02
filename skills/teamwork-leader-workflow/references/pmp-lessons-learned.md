@@ -151,12 +151,12 @@ CEO approve → TeamLead writes the file + appends index line to `MEMORY.md`:
 - [<Project Name>](project_<slug>.md) — <one-line description>
 ```
 
-Index append uses §11.3 stale guard (per `progress-md-schema.md`, which itself extends `~/.claude/rules/auto-review-cadence.md` Plan staleness pattern) to prevent CC memory system overwrite.
+Index append uses §11.3 stale guard (per `progress-md-schema.md` — plugin self-contained pattern equivalent to host-level Plan staleness conventions) to prevent CC memory system overwrite.
 
 ## Step 6 — CleanupGate
 
 (Per design doc §5.4) TeamLead dispatches Sonnet with:
-- `~/CLAUDE.md §清理紀律` text **embedded verbatim**
+- Cleanup discipline text **embedded verbatim** (plugin default: prohibit batch-delete of untracked files without inventory + stakeholder confirmation; project CLAUDE.md overrides)
 - Session-start ISO-8601 timestamp
 - Explicit instruction: "Do NOT propose deletion of files older than session-start unless explicitly user-marked-disposable"
 
@@ -179,10 +179,10 @@ Options:
 1. One AskUserQuestion per file (not per batch). If Sonnet enumerated 30 files, TeamLead issues up to 30 questions sequentially.
 2. CEO answer of `delete` authorizes ONLY the specific path in that question — not a pattern, not a glob, not "all similar".
 3. `abort` immediately exits the cleanup loop; remaining un-asked items are kept by default.
-4. Pre-existing files (mtime older than session-start) MUST default to `keep` and require `delete` verb plus extra rationale field; per `~/CLAUDE.md §清理紀律` these are treated as out-of-scope unless explicitly user-marked-disposable.
+4. Pre-existing files (mtime older than session-start) MUST default to `keep` and require `delete` verb plus extra rationale field; plugin's cleanup discipline (project CLAUDE.md may override) treats these as out-of-scope unless explicitly user-marked-disposable.
 5. TeamLead logs each (path, verb, rationale-if-pre-existing) row in `## Self-Audit` ### CleanupGate sub-section.
 
-This rule prevents the failure mode documented in `~/CLAUDE.md §清理紀律 §Why` (2026-04-27 incident: batch-deletion of `.claude-artifacts/` lost prior-session design files). The per-item gate is the structural safeguard — without it, "TeamLead surfaces deletion proposals" can collapse into a single batch confirmation that defeats the whole discipline.
+This rule prevents a known failure mode (batch-deletion of pseudo-disposable directories silently losing prior-session work). The per-item gate is the structural safeguard — without it, "TeamLead surfaces deletion proposals" can collapse into a single batch confirmation that defeats the whole discipline.
 
 ## Step 7 — CEO_Gate_Final
 

@@ -175,9 +175,9 @@ MCP variants (`mcp__plugin_playwright_*`, `mcp__claude-in-chrome__*`) are usable
      "docs_paths": ["<abs/path>/docs/spec.md"],
      "code_diff": "<git diff output, or file listing if non-repo>",
      "rules_paths": [
-       "~/.claude/rules/auto-review-cadence.md",
-       "~/.claude/rules/CONTRIBUTING.md",
-       "~/.claude/rules/TESTING.md"
+       "<plugin>/skills/teamwork-leader-workflow/references/discipline/surgical-change.md",
+       "<plugin>/skills/teamwork-leader-workflow/references/discipline/simplicity.md",
+       "<plugin>/skills/teamwork-leader-workflow/references/discipline/testing-discipline.md"
      ],
      "prompt": "Does this implementation satisfy the documented requirements and project conventions? Output classifier per three-gates.md schema."
    }
@@ -191,7 +191,7 @@ MCP variants (`mcp__plugin_playwright_*`, `mcp__claude-in-chrome__*`) are usable
 3. Script builds full prompt (embedding all referenced files), pipes to `claude -p`
 4. Captures `claude -p` stdout
 5. TeamLead extracts ` ```json ``` block per §JSON parse failure
-6. Manifest file deleted on success per `~/CLAUDE.md §清理紀律`
+6. Manifest file deleted on success (plugin's cleanup discipline; project CLAUDE.md may override)
 
 **Cost note**: each Gate_Requirement run = full Claude session (~50-100kT). Surfaced in StageReport token tally.
 

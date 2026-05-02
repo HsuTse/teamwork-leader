@@ -31,4 +31,4 @@ Applicable to: **RD PM** (and any role making code edits)
 
 ## Override
 
-User-level rules at `~/.claude/rules/CONTRIBUTING.md` (if present) take precedence per user-instruction priority. This file is plugin's portable default for users without that file.
+This file is the plugin's portable default. If your team has different conventions, fork the plugin or document overrides in your project's `CLAUDE.md` — agents follow project CLAUDE.md ahead of plugin defaults per Claude Code's standard precedence.

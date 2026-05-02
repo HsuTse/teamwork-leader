@@ -24,7 +24,7 @@ Plugin-bundled discipline guides — **applicable to every RD dispatch**:
 - `references/discipline/styling-discipline.md` — when touching CSS / SCSS / inline styles
 - `references/discipline/mezzanine-discipline.md` — Mezzanine projects only (auto-skip if not Mezzanine)
 
-User-level rules at `~/.claude/rules/*.md` (if present in CEO's environment) take precedence per user-instruction priority.
+Project's `CLAUDE.md` overrides plugin defaults per Claude Code standard precedence (project instructions > plugin guidance).
 
 ## Owns
 
