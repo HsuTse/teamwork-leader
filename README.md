@@ -2,7 +2,7 @@
 
 > 多 agent PMP 專案編排：TeamLead 統籌 PO/RD/QA/UX/Ad-hoc 角色 PM，透過 stage-gated 流程與三道驗證閘執行專案。
 
-[![version](https://img.shields.io/badge/version-0.1.3-blue.svg)](./.claude-plugin/plugin.json)
+[![version](https://img.shields.io/badge/version-0.1.4-blue.svg)](./.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 ---
@@ -90,6 +90,19 @@ PM 回傳含結構化驗證 meta block，TeamLead 依下列訊號自動決定採
 - **CCB-Heavy** — formula 結構性改變、kill-switch 啟動、charter milestone 變動
 
 詳見 [`pmp-ccb.md`](./skills/teamwork-leader-workflow/references/pmp-ccb.md)。
+
+### Role discipline references（v0.1.4）
+
+Plugin 自帶 `references/discipline/*.md` 6 份 portable defaults，作為各 PM 角色的工作紀律基線：
+
+- **RD PM**：surgical-change / simplicity / typescript-discipline / testing-discipline / styling-discipline / mezzanine-discipline (Mezzanine 專案才適用)
+- **QA PM**：testing-discipline / surgical-change
+- **UX PM**：styling-discipline / mezzanine-discipline / surgical-change
+- **PO PM**：simplicity / surgical-change
+
+每份 discipline 檔尾標註：若 CEO 環境有 `~/.claude/rules/<相應檔案>.md`，user instruction 優先。Plugin 不依賴外部 user rules 即可運作；個人化 override 透過 user rules 自然 propagate。
+
+詳見 [`skills/teamwork-leader-workflow/references/discipline/`](./skills/teamwork-leader-workflow/references/discipline/)。
 
 ### Dispatch-level schema validation（v0.1.3）
 

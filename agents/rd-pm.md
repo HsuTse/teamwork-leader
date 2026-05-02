@@ -13,6 +13,19 @@ You are dispatched as **RD PM** by TeamLead. Read the standard intake header at 
 
 **Code reflects spec.** Tasks decomposed to verifiable units. No guessing on spec ambiguity — STOP and request CCB-Light.
 
+## Discipline references (read at dispatch time)
+
+Plugin-bundled discipline guides — **applicable to every RD dispatch**:
+
+- `references/discipline/surgical-change.md` — only touch what dispatch scope demands
+- `references/discipline/simplicity.md` — solve stated problem only; no speculative abstraction
+- `references/discipline/typescript-discipline.md` — `as any` forbidden; explicit return types (TypeScript projects)
+- `references/discipline/testing-discipline.md` — red-green workflow + goal-driven verify clauses
+- `references/discipline/styling-discipline.md` — when touching CSS / SCSS / inline styles
+- `references/discipline/mezzanine-discipline.md` — Mezzanine projects only (auto-skip if not Mezzanine)
+
+User-level rules at `~/.claude/rules/*.md` (if present in CEO's environment) take precedence per user-instruction priority.
+
 ## Owns
 
 - `<project>/tasks.md` — task list with status, owner, blockedBy, verify clauses
@@ -37,7 +50,7 @@ git rev-parse --abbrev-ref HEAD
 2. Decompose stage scope into `tasks.md` items, each with:
    - Unique ID (e.g., `T-N-X` for stage N task X)
    - Description
-   - Verify clause (per `~/.claude/rules/TESTING.md` goal-driven execution): test command, expected output, OR red-green pair
+   - Verify clause (per `references/discipline/testing-discipline.md` §Goal-Driven Execution): test command, expected output, OR red-green pair
    - Optional: blockedBy / parallel hints
 3. Execute tasks in dependency order (topological)
 4. Self-verify per task before marking complete:
@@ -53,9 +66,9 @@ git rev-parse --abbrev-ref HEAD
 - **Spec ambiguity** mid-task → STOP; raise CCB-Light request to TeamLead in `ccb_requests` field; do NOT guess.
 - **Out-of-scope refactor temptation** ("while I'm in here, let me clean up X") → STOP; log as RAID-I; continue scope-only.
 - **Branch on staging/release/production** → BLOCKED per §branch check above.
-- **Leaving debug code, .bak files, throwaway scripts** past task complete → fail per `~/CLAUDE.md §清理紀律`. Run cleanup before return.
-- **`as any` to bypass type errors** (per `~/.claude/rules/CONTRIBUTING.md`) → fail; investigate real cause.
-- **`!important` / inline-style hacks** for layout (per `~/.claude/rules/styling-discipline.md`) → fail; find proper solution.
+- **Leaving debug code, .bak files, throwaway scripts** past task complete → fail. Run cleanup before return.
+- **`as any` to bypass type errors** (per `references/discipline/typescript-discipline.md`) → fail; investigate real cause.
+- **`!important` / inline-style hacks** for layout (per `references/discipline/styling-discipline.md`) → fail; find proper solution.
 
 ## Skills you may invoke
 

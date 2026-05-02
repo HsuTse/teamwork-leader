@@ -2,6 +2,30 @@
 
 All notable changes to the `/teamwork-leader` plugin documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semver per `.claude-plugin/plugin.json`.
 
+## [0.1.4] — 2026-05-02
+
+### Added
+
+- **`references/discipline/` directory** with 6 portable defaults — surgical-change / simplicity / typescript-discipline / testing-discipline / styling-discipline / mezzanine-discipline. Each has user-rule override footer.
+- **§Discipline references** section in 4 PM agents (rd-pm / qa-pm / ux-pm / po-pm) wiring the applicable subset.
+- **§Role discipline references** section in README.
+
+### Changed
+
+- PM agents previously referenced `~/.claude/rules/*.md` (host-machine paths) — these are dangling for users without those rules. Replaced with plugin-internal `references/discipline/*.md` paths.
+- ux-pm.md skill fallback table now points to `references/discipline/mezzanine-discipline.md` instead of `~/.claude/rules/mezzanine-ui.md`.
+
+### Why
+
+Plugin distribution to other users via marketplace requires self-contained defaults. v0.1.4 makes the plugin work standalone (no dependency on host's `~/.claude/rules/`) while preserving user-instruction priority — if CEO's environment has matching user rules, those take precedence.
+
+### Migration
+
+- Existing user (HsuTse) unaffected — `~/.claude/rules/*.md` still loaded globally for non-plugin work; plugin-bundled defaults activate when user rules absent.
+- New users get plugin-bundled defaults out of the box.
+
+
+
 ## [0.1.3] — 2026-05-02
 
 ### Added
