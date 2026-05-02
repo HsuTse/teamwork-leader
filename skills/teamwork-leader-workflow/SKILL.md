@@ -61,7 +61,7 @@ Discovery → BranchCheck → WorktreeDecision → TeamFormation → BudgetPropo
    ▼
 ProjectClose
    ├── LessonsLearned (per-PM dispatch + TeamLead consolidates)
-   ├── CleanupGate (Sonnet enumerate, embed CLAUDE.md §清理紀律 verbatim)
+   ├── CleanupGate (Sonnet enumerate, embed plugin's cleanup discipline verbatim — project CLAUDE.md may override)
    ├── MemoryEntry (project_<slug>.md to user memory + MEMORY.md index append)
    └── ★CEO_Gate_Final★
 ```

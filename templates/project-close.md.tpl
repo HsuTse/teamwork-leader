@@ -92,7 +92,8 @@ Each step has a sub-section below. Mark steps complete as TeamLead progresses.
 
 ## Step 6 — CleanupGate
 
-<!-- TeamLead dispatches Sonnet with `~/CLAUDE.md §清理紀律` embedded verbatim + session-start ISO-8601 timestamp.
+<!-- TeamLead dispatches Sonnet with plugin's cleanup discipline embedded verbatim + session-start ISO-8601 timestamp.
+     Project's CLAUDE.md (if present) overrides plugin defaults per Claude Code standard precedence.
      Per references/pmp-lessons-learned.md §Step 6. -->
 
 - [ ] Sonnet dispatched with cleanup rule + session-start timestamp
