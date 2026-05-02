@@ -30,6 +30,10 @@ Evidence base: 3 events / 25 dispatches / 1 project. Path 3 split-by-evidence-st
 - No retroactive backfill
 - **In-flight v0.1.2 projects upgrading mid-stage**: see `docs/v0.1.3-rollback.md` §Mid-stage upgrade guidance — recommended path is upgrading at next CEO_Gate boundary; `warn` mode supports one-stage evidence-gathering before flipping to `strict`
 
+### Tag history note
+
+The `v0.1.3` git tag was initially created at commit `142ef7e` (initial schema enforcement ship). After 3-parallel Opus final review returned `PASS_WITH_MINOR` with 4 important findings, a follow-up commit `e88b656` was created to address them inline (per `/opus-review final` blocking rule for important issues). The `v0.1.3` tag was then moved (locally, before push) to point at `e88b656` so that the released v0.1.3 includes both the initial ship AND the review-driven fixes as a single coherent release. Both commits are reachable via `git log v0.1.3` and the move is irrelevant once the tag is pushed (`git push origin v0.1.3` published the final tag location only).
+
 ### Final-review addenda (post-Opus PASS_WITH_MINOR)
 
 3 parallel Opus reviewers (Correctness / Security / Doc-sync) returned PASS_WITH_MINOR with 4 important findings; all addressed in-place before tag finalization:

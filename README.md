@@ -157,7 +157,7 @@ teamwork-leader/
 
 - **初次 dogfood 完成**：BeiliSystem PR #30/#34（3 stages, 25 dispatches, 5 real defects caught, 0 false positives）
 - **Validation prereq**：4/4 PASS（`verification_self_redundancy` 8 distinct values；`divergence_score` 0=4%；`expected_scope_files`/`expected_raid_delta` 填寫率 100%；pre-task estimates 1:1 對應）
-- **N1+KMR mechanism instrumented**：trust_tier 全 PMs 仍 `standard`；KMR proxy max observed 2.0（far from threshold 7）；`kmr_fired=true` count 0/25
+- **N1+KMR mechanism instrumented**：trust_tier 全 PMs 仍 `standard`；KMR proxy max observed 2.0（threshold 4，headroom 2.0）；`kmr_fired=true` count 0/25
 
 **仍待強化**：
 
