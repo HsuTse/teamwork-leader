@@ -28,6 +28,17 @@ Evidence base: 3 events / 25 dispatches / 1 project. Path 3 split-by-evidence-st
 - v0.1.2 audit-trail.jsonl rows treated as `schema_validation_status: null` (legacy)
 - New rows post-v0.1.3 ship → non-null (unless `schema_enforcement_mode == off`)
 - No retroactive backfill
+- **In-flight v0.1.2 projects upgrading mid-stage**: see `docs/v0.1.3-rollback.md` §Mid-stage upgrade guidance — recommended path is upgrading at next CEO_Gate boundary; `warn` mode supports one-stage evidence-gathering before flipping to `strict`
+
+### Final-review addenda (post-Opus PASS_WITH_MINOR)
+
+3 parallel Opus reviewers (Correctness / Security / Doc-sync) returned PASS_WITH_MINOR with 4 important findings; all addressed in-place before tag finalization:
+
+- **A.1**: `stage-runbook.md` §EXECUTING step 5 now documents `warn` mode runtime behavior (was only in template + rollback doc)
+- **A.minor**: `step 5` second-INCOMPLETE → ESCALATED branch now documents `kmr_*` field nulling + Phase 3/4 calibration query filter
+- **B.1**: `docs/v0.1.3-rollback.md` §Migration adds mid-stage upgrade guidance (defer to CEO_Gate boundary OR start with `warn`)
+- **B.2**: `templates/budget-proposal.md.tpl` + rollback doc tighten initial-baseline rule — `warn`/`off` declared at Stage 1 BudgetProposal also requires CCB-Heavy ratification (not just mid-flight transitions)
+- **C.1**: `README.md` synced — version badge → 0.1.3, §狀態與限制 reflects BeiliSystem dogfood completion + outstanding N≥2 gate, §Roadmap 3 items checked off + 3 new items, §核心特色 adds dispatch-level schema validation section
 
 ### Related
 
