@@ -128,6 +128,8 @@ Emit return as a fenced ` ```json ` block. TeamLead extracts via regex parse `/`
 
 **All mandatory fields must be present.** `meta` is **OPTIONAL only for legacy in-flight dispatches** (started before Phase 2 RSS rollout); **new dispatches MUST emit `meta`** per role-specific intake in `agents/<role>-pm.md`. Missing any *mandatory* field → TeamLead returns INCOMPLETE → you'll be re-dispatched once with a schema reminder. Second incomplete → CEO escalation.
 
+**Retry pool separation (v0.1.3)**: schema-validation re-dispatch (this INCOMPLETE → re-dispatch flow) has its OWN 1-retry pool, distinct from §EXECUTING step 7's step-review retry pool and Mini Gate's retry pool. A schema-validation re-dispatch does NOT consume the step-review retry slot — the rationale being that schema correctness is a structural fix, not a content-quality fix. The audit-trail.jsonl row records the final outcome via `schema_validation_status` ∈ {`pass`, `rejected_and_retried`, `rejected_and_escalated`, `null`} (see `references/progress-md-schema.md` §`schema_validation_status` field).
+
 For legacy in-flight dispatches without `meta`, TeamLead falls back to the existing 5-rule sampling. All new dispatches see §`meta` block field semantics below.
 
 **Field semantics**:

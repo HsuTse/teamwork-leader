@@ -228,7 +228,8 @@ Each line is a self-contained JSON object:
   "kmr_proxy": 1.0,
   "kmr_fired": false,
   "kmr_verdict": null,
-  "kmr_root_cause": null
+  "kmr_root_cause": null,
+  "schema_validation_status": "pass"
 }
 ```
 
@@ -255,6 +256,12 @@ Field constraints:
 - `kmr_verdict` (Phase 3 T12) — `"PASS" | "PARTIAL" | "FAIL" | "INCONCLUSIVE"` (Mini Gate_Forward classifier verdict) or `null` if not fired
 - `kmr_root_cause` (Phase 3 T12) — `"code_bug" | "spec_ambiguity" | "spec_gap" | "environmental" | "inconclusive"` from Mini Gate classifier when verdict ≠ PASS; `null` otherwise
 - `kmr_skipped` (Phase 3 migration) — boolean: `true` if dispatch lacked a `pre-task-estimates.jsonl` entry (legacy pre-rollout dispatch carried into a post-rollout stage); `false` for normal dispatches; `null` if KMR mode is disabled per `kmr_mode` knob
+- `schema_validation_status` (v0.1.3) — enum `"pass" | "rejected_and_retried" | "rejected_and_escalated" | null`: persists the outcome of TeamLead's parse-time validation against the 11 mandatory fields (per `anti-rubber-stamp.md` §Mandatory rejection criteria):
+  - `pass` — first attempt parsed cleanly with all 11 fields present
+  - `rejected_and_retried` — first attempt INCOMPLETE → re-dispatched with schema reminder → second attempt PASS (this final row records the successful retry; the failed attempt is not separately persisted to keep audit-trail per-task 1:1 with `pre-task-estimates.jsonl`)
+  - `rejected_and_escalated` — both attempts INCOMPLETE → ESCALATED (this row records the second failed attempt for diagnostic completeness; ESCALATED state separately captured in PROGRESS.md `## Exception`)
+  - `null` — legacy in-flight dispatches predating v0.1.3 (no validation status recorded retroactively); also `null` if `schema_enforcement_mode == off` knob disables v0.1.3 enforcement
+  - **Retry budget invariant**: schema validation re-dispatch (INCOMPLETE → second attempt) does **NOT** consume the §EXECUTING step 7 step-review retry slot. Schema validation has its own 1-retry pool (separate from step-review retry pool and Mini Gate retry pool). This separation is intentional: schema correctness fix is not a content-quality fix.
 
 ### Single-writer invariant (NOT stale-guard)
 

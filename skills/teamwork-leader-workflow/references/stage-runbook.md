@@ -83,7 +83,7 @@
 
 **Error / timeout handling**:
 - A PM returns prose (no fenced JSON) → see §JSON parse failure (below)
-- A PM returns INCOMPLETE → re-dispatch ONCE with schema reminder; second INCOMPLETE → ESCALATED
+- A PM returns INCOMPLETE (parse OK but missing mandatory fields) → schema-validation re-dispatch per §EXECUTING step 5 (v0.1.3); separate retry pool from step-review (does NOT consume step 7 retry slot); second INCOMPLETE → `schema_validation_status: rejected_and_escalated` + ESCALATED
 - Token estimate from any PM exceeds 80% per-stage threshold → warn CEO at next gate per `budget-proposal.md.tpl`
 
 ---
@@ -170,7 +170,12 @@ This state implements the **subagent-driven-development PATTERN** (per `reuse-ma
    - Allowed tools: per `dispatch-header.md` allow-list for that PM
 5. **On RD return**:
    - Extract JSON via `/```json\s*\n([\s\S]+?)\n```/` regex (multiline-safe). Strip leading prose if any. If parse fails → §JSON parse failure.
-   - Validate all 11 required fields per `anti-rubber-stamp.md` §Mandatory rejection criteria.
+   - **Schema validation (v0.1.3)** — Validate all 11 required fields per `anti-rubber-stamp.md` §Mandatory rejection criteria (canonical list: `outcome`, `value_hypothesis`, `value_realized`, `dod_status`, `dod_evidence`, `artifacts_touched`, `verify_evidence`, `raid_updates`, `ccb_requests`, `token_estimate_kT`, `handoff`).
+     - **First attempt PASS** → record `schema_validation_status: pass` in audit-trail.jsonl (written at step 7a). Continue to anti-rubber-stamp checklist below.
+     - **First attempt INCOMPLETE** (any of the 11 fields missing or malformed) → re-dispatch ONCE with prompt `"Your prior return missed required fields: <list>. Required schema per dispatch-header.md §Return contract. Re-emit complete return."` This re-dispatch **does NOT** consume step 7's step-review retry slot — schema validation has its own 1-retry pool (per `references/progress-md-schema.md` §`schema_validation_status` field §Retry budget invariant).
+       - **Second attempt PASS** → record `schema_validation_status: rejected_and_retried`. Continue to anti-rubber-stamp checklist.
+       - **Second attempt INCOMPLETE** → record `schema_validation_status: rejected_and_escalated`; transition to §ESCALATED with `## Exception` populated: `Type: schema_validation_exhausted`, `Detail: PM <role> failed schema validation twice; missing fields second attempt: <list>`.
+     - **`schema_enforcement_mode == off` knob** (per `templates/budget-proposal.md.tpl`) → skip validation; record `schema_validation_status: null`; proceed to anti-rubber-stamp directly. This kill-switch is CCB-Heavy because it disables a deployed enforcement mechanism.
    - **Run §Anti-rubber-stamp 5-rule checklist** (below) on this return.
    - Serialize raid_updates / ccb_requests into PROGRESS.md (after stale guard).
    - Update Last Action with `[TRUSTED]` if all 5 anti-rubber-stamp rules passed; else `[CLAIMED]`.
@@ -215,7 +220,7 @@ This state implements the **subagent-driven-development PATTERN** (per `reuse-ma
 
     - `per_task_divergence_proxy < 4` → continue to step 8 normally.
 
-    **Append to audit-trail.jsonl** for this dispatch: write structured top-level fields per `references/progress-md-schema.md` §Audit-trail sidecar — `kmr_proxy: <float>`, `kmr_fired: <bool>`, `kmr_verdict: <enum|null>`, `kmr_root_cause: <enum|null>`. Do NOT pipe-delimit structured data into the `notes` field (would defeat `jq` queries).
+    **Append to audit-trail.jsonl** for this dispatch: write structured top-level fields per `references/progress-md-schema.md` §Audit-trail sidecar — `kmr_proxy: <float>`, `kmr_fired: <bool>`, `kmr_verdict: <enum|null>`, `kmr_root_cause: <enum|null>`, **`schema_validation_status: <enum|null>` (v0.1.3 — outcome of step 5 schema validation: `pass` / `rejected_and_retried` / `rejected_and_escalated` / `null` per kill-switch)**. Do NOT pipe-delimit structured data into the `notes` field (would defeat `jq` queries).
 
     **Worked examples**:
     - **Aligned (no mini-gate)**: PM reports 14 kT vs expected 12 → ratio 1.17, budget_surprise = round(1.7) = 2. Touched only 2 expected files → scope_surprise = 0. 0 new RAID. Step-review PASS. proxy = max(2, 0, 0, 0) = **2** < 4 → no mini-gate.
@@ -524,6 +529,23 @@ Per `three-gates.md` §JSON parse failure (per design doc §7.0):
 ```
 
 **Strict rule**: NO prose fallback. NO best-effort interpretation. Either parse or escalate.
+
+---
+
+## §Schema validation worked examples (v0.1.3)
+
+Per §EXECUTING step 5 schema validation. Worked examples for the three terminal `schema_validation_status` values:
+
+**Example 1 — `pass` (first attempt PASS)**:
+PM rd-pm dispatch S1-D3 returns valid fenced ` ```json ` with all 11 mandatory fields present. TeamLead step 5 validates → all fields present → continues to anti-rubber-stamp checklist. audit-trail.jsonl row records `schema_validation_status: pass`. Step 7 step-review retry pool untouched (1 slot still available for content-quality issues).
+
+**Example 2 — `rejected_and_retried` (first INCOMPLETE → second PASS)**:
+PM rd-pm dispatch S2-D5 first attempt returns prose only with `outcome` field, missing `verify_evidence` and `token_estimate_kT`. TeamLead step 5 validation → INCOMPLETE → re-dispatch with prompt naming the missing fields. PM second attempt returns complete 11-field JSON. TeamLead step 5 validation → PASS → continues. audit-trail.jsonl row records `schema_validation_status: rejected_and_retried`. **Step 7 step-review retry pool still has 1 slot** (schema retry pool was consumed, but they are separate pools).
+
+**Example 3 — `rejected_and_escalated` (both INCOMPLETE)**:
+PM ux-pm dispatch S3-D2 first attempt missing `dod_evidence` + `artifacts_touched`. TeamLead step 5 → re-dispatch. Second attempt still missing `dod_evidence` (PM persistently confused about schema). TeamLead step 5 → second INCOMPLETE → record `schema_validation_status: rejected_and_escalated`; transition to §ESCALATED with `## Exception` populated `Type: schema_validation_exhausted, Detail: PM ux-pm S3-D2 missing dod_evidence twice`. CEO arbitrates.
+
+**Anti-anchoring note**: v0.1.3 ship target — `schema_validation_status` distribution should be ≥95% `pass` after PMs adapt. Any project showing >5% `rejected_and_retried` after Stage 2 indicates a PM-side schema-comprehension issue worth surfacing as RAID-I (not a tooling-side defect). `rejected_and_escalated` should be near-zero; non-zero is an immediate CCB-Light trigger.
 
 ---
 

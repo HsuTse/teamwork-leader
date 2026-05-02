@@ -59,6 +59,7 @@ Per design doc §9 + references/progress-md-schema.md §Budget Baseline.
 | `verify_policy` (Phase 2 RSS) | `default` | <`minimal-per-dispatch` \| `default` \| `broad`> — see §`verify_policy` tier explanation below |
 | `trust_tier_mode` (Phase 3 N1) | `enabled` | <`enabled` \| `disabled`> — `disabled` defaults all PMs to `standard`, skipping Rule 0.5 computation. Disable activation requires CCB-Heavy per `references/pmp-ccb.md` (rollback of deployed verification mechanism). |
 | `kmr_mode` (Phase 3 KMR) | `enabled` | <`enabled` \| `disabled`> — `disabled` skips `stage-runbook.md` §EXECUTING step 7a entirely (no per-task divergence proxy, no Mini Gate firing); `pre-task-estimates.jsonl` is no longer written; `kmr_*` fields write `null` in audit-trail.jsonl. Disable activation requires CCB-Heavy. |
+| `schema_enforcement_mode` (v0.1.3) | `strict` | <`strict` \| `warn` \| `off`> — `strict` (default) runs `stage-runbook.md` §EXECUTING step 5 schema validation per v0.1.3 with INCOMPLETE → re-dispatch (separate retry pool) → second INCOMPLETE → ESCALATED. `warn` runs validation but only logs `schema_validation_status` to audit-trail without rejecting (legacy v0.1.2 silent-acceptance behavior preserved). `off` skips validation entirely; `schema_validation_status: null`. **`warn` and `off` activation requires CCB-Heavy** per `references/pmp-ccb.md` (rollback of deployed enforcement mechanism). |
 
 ### `verify_policy` tier explanation (Phase 2 T4)
 

@@ -1,0 +1,47 @@
+# Changelog
+
+All notable changes to the `/teamwork-leader` plugin documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semver per `.claude-plugin/plugin.json`.
+
+## [0.1.3] — 2026-05-02
+
+### Added
+
+- **Schema validation enforcement** (`stage-runbook.md` §EXECUTING step 5): inline 11-field canonical list with explicit INCOMPLETE → re-dispatch → PASS / second-INCOMPLETE → ESCALATED flow
+- **`schema_validation_status` field** in `audit-trail.jsonl` row schema (enum: `pass | rejected_and_retried | rejected_and_escalated | null`)
+- **`schema_enforcement_mode` knob** in `budget-proposal.md.tpl` (`strict` default; `warn` / `off` require CCB-Heavy)
+- **Schema validation worked examples** section in `stage-runbook.md` (three terminal cases + anti-anchoring note)
+- **v0.1.3 rollback contract** documentation (`docs/v0.1.3-rollback.md`)
+
+### Changed
+
+- **`dispatch-header.md` §Return contract** now explicitly documents retry-pool separation: schema-validation re-dispatch has its OWN 1-retry pool, distinct from §EXECUTING step 7 step-review retry pool. Schema correctness fix is structural, not content-quality.
+- **`stage-runbook.md` §Error / timeout handling** INCOMPLETE entry rephrased to reference v0.1.3 step 5 schema-validation flow and retry-pool separation.
+
+### Why
+
+BeiliSystem PR #30/#34 dogfood pilot (3 stages, 25 dispatches) observed 3/25 (12%) incomplete returns. Pre-v0.1.3 mechanism was prose-only — INCOMPLETE handling described but no persisted record of validation outcome, ambiguous retry budget, no diagnostic trail when ESCALATED. v0.1.3 closes these gaps with non-interruptive enforcement (PM re-dispatch is no friction; user not interrupted).
+
+Evidence base: 3 events / 25 dispatches / 1 project. Path 3 split-by-evidence-strength (independent 2-Opus deliberation consensus) classifies this as immediate-ship: high-evidence + non-interruptive, no calibration thresholds introduced.
+
+### Migration
+
+- v0.1.2 audit-trail.jsonl rows treated as `schema_validation_status: null` (legacy)
+- New rows post-v0.1.3 ship → non-null (unless `schema_enforcement_mode == off`)
+- No retroactive backfill
+
+### Related
+
+- Origin issue: `~/.claude/projects/-Users-HsuTse/memory/issues/teamwork-dispatch-schema-enforcement.md`
+- Decision context: 2-Opus deliberation 2026-05-02 (split-by-evidence-strength)
+
+## [0.1.2] — 2026-05-02 (prior)
+
+Phase 3 N1 trust_tier + KMR per-task divergence proxy ship-complete with 8 final-Opus fixes in-place. Reference: `~/.claude/projects/-Users-HsuTse/memory/decisions/teamwork-leader-phase-3-shipment.md`.
+
+## [0.1.1]
+
+Version bump.
+
+## [0.1.0]
+
+Initial release.
