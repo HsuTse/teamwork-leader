@@ -24,3 +24,4 @@ docs/audit-trail.jsonl
 docs/pre-task-estimates.jsonl
 docs/PROGRESS.teamlead*.md
 docs/tasks.teamlead*.md
+.teamlead-*/

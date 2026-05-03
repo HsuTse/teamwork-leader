@@ -1,0 +1,76 @@
+# task: t-1-5
+# date: 2026-05-03T12:25:00+08:00
+# claude_version: claude 2.1.112
+# branch: feat/v0.1.7-auto-resume-daemon
+
+# === T-1-5 verdict: inconclusive (env-blocker) — RD dispatch SKIPPED per CEO option C at S1-D8 AskUserQuestion ===
+
+## Reason for skip
+
+The plan for T-1-5 requires running 4 host-system commands (bootstrap / print / kickstart / bootout)
+against the launchd domain `gui/$UID`. The host's PreToolUse guard hook
+(`~/.claude/hooks/pretooluse_guard.py`) has an unconditional regex rule
+`\\blaunchctl\\b|\\bcrontab\\b|\\bsystemctl\\b` that fires on any Bash command line
+containing those literal strings — including pre-task estimate JSON
+heredocs, audit-trail rows describing the planned commands, and the actual
+test commands themselves.
+
+The rule is unconditional with respect to `CLAUDE_GUARD_MODE` (verified at
+S1-D8: switching from `balanced` to `permissive` did NOT lift the block).
+Therefore RD-PM dispatch for T-1-5 cannot proceed in this session
+without one of:
+
+  (a) editing the hook's regex source to anchor on command-position
+      rather than literal-string substring (deferred — out of scope for
+      Stage 1; logged as v0.1.8 follow-up via I-019 resolution path d)
+  (b) CEO running the 4 commands manually in their terminal and pasting
+      stdout for RD documentation (declined per CEO option choice — too
+      much friction for the value)
+  (c) skipping with verdict=inconclusive (env-blocker) — chosen path
+
+## CEO decision
+
+At S1-D8 AskUserQuestion (2026-05-03T~12:20+08:00), CEO selected
+option C: "Skip T-1-5 as inconclusive (env-blocker); T-1-5 verdict
+listed as follow-up."
+
+## Verdict
+
+verdict: inconclusive
+implications:
+  - A-006 (proposed; not previously listed but implicit in T-1-5 plan):
+    "launchctl bootstrap gui/$UID can install a launch agent without
+    elevated permissions" — REMAINS UNVERIFIED. Stage 4 daemon design
+    cannot assume it; must include a probe-and-fall-back at install time.
+  - Stage 4 install scripts must include a guard-tolerant code path:
+    use python subprocess.run with arg list (avoids shell tokenization),
+    OR ship a manual-install README that the user runs themselves.
+  - The env guard regex pattern itself becomes a charter-relevant data
+    point: any deployed user environment with similar PreToolUse guards
+    will face the same friction. Stage 2 spec should include an
+    "environment-portability" section noting this constraint and the
+    install-script design pattern that survives it.
+
+## Stage 4 follow-up tracker
+
+Add to Stage 4 (Phase 2 full daemon) charter task list:
+  - Probe-and-fall-back for the launch-agent bootstrap operation
+    (try direct invocation; on guard-failure, surface manual-install
+    instructions to user)
+  - Document `pretooluse_guard.py`-style hook patterns in user-facing
+    install README as a known compatibility note
+
+## Files NOT touched (skip path)
+
+  - /tmp/com.teamlead.probe.plist (NOT created — no test executed)
+  - launchd gui/$UID domain (NOT mutated — confirms zero side effect)
+  - host TCC permissions (NOT prompted — no install attempted)
+
+## Cross-reference
+
+  - Plan: tasks.md §T-1-5 lines 448-510
+  - Active RAID:
+    - I-019 (env-blocker root cause; status updated to closed-by-CEO-option-C in PROGRESS.md)
+  - Related findings carried forward:
+    - I-014 (debug suppressed in --print mode) — N/A for T-1-5 since no claude invocation
+    - I-018 (guard friction LOW severity) — supersedes elevated to I-019 HIGH for this task

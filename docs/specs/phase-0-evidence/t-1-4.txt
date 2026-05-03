@@ -1,0 +1,14 @@
+# task: t-1-4
+# date: 2026-05-03T12:14:21+08:00
+# claude_version: 2.1.112 (Claude Code)
+# branch: feat/v0.1.7-auto-resume-daemon
+# --- .gitignore fix ---
+# pattern .teamlead-*/ added to .gitignore (line 27)
+# git check-ignore -v .teamlead-probe/probe.txt => .gitignore:27:.teamlead-*/ .teamlead-probe/probe.txt  [CONFIRMED]
+Hi [HsuTse]!
+# --- probe verification ---
+=== ls -la probe ===
+-rw-r--r--  1 HsuTse  staff  188  5月  3 12:15 /Users/HsuTse/ClaudeProject/teamwork-leader/.teamlead-probe/probe.txt
+=== cat probe ===
+wrote-from-hook ts=2026-05-03T12:15:06+08:00 cwd=/Users/HsuTse/ClaudeProject/teamwork-leader plugin_root=/tmp/teamlead-probe-plugin project_dir=/Users/HsuTse/ClaudeProject/teamwork-leader
+# verdict: confirmed — probe.txt written outside CLAUDE_PLUGIN_ROOT with correct project_dir

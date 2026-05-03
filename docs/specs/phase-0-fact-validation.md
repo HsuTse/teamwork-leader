@@ -203,32 +203,94 @@ n/a — confirms baseline assumption. Design of PreCompact → SessionStart resu
 - `owner`: RD
 - `raid_links`: A-003
 - `raid_justification`: n/a
-- `executed_at`: pending
+- `executed_at`: 2026-05-03T11:31:36+08:00
 
 #### Command
 
 ```bash
-# TBD by RD: synthetic context-saturation harness that triggers
-# PreCompact, hook emits 5KB+ payload; capture both hook-side log
-# and Claude-side observation of the payload.
+# Step 1: Recreated /tmp/teamlead-probe-plugin scaffold (T-1-7 scaffold was absent)
+mkdir -p /tmp/teamlead-probe-plugin/{hooks,scripts}
+# Copied precompact-marker.sh from project staging file:
+#   docs/specs/phase-0-evidence/precompact-marker-staging.sh
+#   -> /tmp/teamlead-probe-plugin/scripts/precompact-marker.sh
+# hooks.json (wrapper format per I-005-T1-7):
+#   {"description":"...", "hooks":{"PreCompact":[{"matcher":"*","hooks":[{"type":"command","command":"bash ${CLAUDE_PLUGIN_ROOT}/scripts/precompact-marker.sh","timeout":30}]}]}}
+
+# Step 2: Build flood JSON
+python3 -c "
+import json
+chunks = ['Lorem ipsum dolor sit amet, consectetur adipiscing elit. ' * 50] * 8000
+with open('/tmp/t-1-2-flood.json','w') as f: json.dump({'flood': chunks}, f)
+"  # Result: 21.8 MB
+
+# Step 3: Run flood session (Attempt 1 — 22 MB explicit-flood prompt)
+claude --plugin-dir /tmp/teamlead-probe-plugin --debug \
+  --print "Read /tmp/t-1-2-flood.json fully and summarize each chunk individually with full quotes" \
+  2>&1 | tee -a docs/specs/phase-0-evidence/t-1-2.txt
+
+# Step 4: Run flood session (Attempt 2 — 917 KB plausible-document prompt)
+python3 -c "
+import json
+paragraphs = ['Paragraph ' + str(i) + ': ' + 'The quick brown fox jumps over the lazy dog. '*10 for i in range(2000)]
+with open('/tmp/t-1-2-flood-small.json','w') as f: json.dump({'title':'Large Research Document','paragraphs':paragraphs},f)
+"
+claude --plugin-dir /tmp/teamlead-probe-plugin --debug \
+  --print "Summarize the document at /tmp/t-1-2-flood-small.json." \
+  2>&1 | tee -a docs/specs/phase-0-evidence/t-1-2.txt
+
+# Step 5: Disk evidence check
+cat /tmp/t-1-2-precompact.log  # Expected: hook log entries if PreCompact fired
+
+# Step 6: Debug output routing test
+claude --plugin-dir /tmp/teamlead-probe-plugin --debug -p "Say 'ping'" \
+  > /tmp/t-1-2-debug-test-stdout.txt 2> /tmp/t-1-2-debug-test-stderr.txt
+# stdout lines: 1 (response), stderr lines: 1 (stdin-wait warning only)
 ```
 
 #### Actual output
 
 ```text
-TBD
+Attempt 1 (22 MB flood):
+  Claude refused prompt via safety heuristic ("Stopping here — won't execute this as requested").
+  No AutoCompact triggered. No PreCompact hook fired.
+  exit=0
+
+Attempt 2 (917 KB structured doc):
+  Claude processed prompt normally (summarized structure without loading full content into context).
+  No AutoCompact triggered. No PreCompact hook fired.
+  exit=0
+
+Disk log check: /tmp/t-1-2-precompact.log — NOT PRESENT (hook never fired)
+MARKER substring in debug stream: NOT PRESENT
+
+Debug output routing (Attempt 3 — ping -p):
+  stdout: 1 line ("ping")
+  stderr: 1 line ("Warning: no stdin data received in 3s, proceeding without it.")
+  --debug flag does NOT emit [DEBUG] lines to stderr in --print/-p mode on claude 2.1.112.
+
+Structural finding: --print/-p mode is a one-shot fresh-context invocation.
+Each invocation starts with empty context. AutoCompact structurally cannot fire
+because there is no accumulated multi-turn conversation context to compact.
+PreCompact event is only triggered during interactive multi-turn sessions
+approaching context saturation — not in --print mode.
 ```
 
 #### Verdict
 
-**TBD**
+**inconclusive** — Cannot trigger AutoCompact synthetically via `--print`/`-p` mode. The limitation is structural (not environment-specific): `--print` creates a fresh one-shot context per invocation; AutoCompact requires an accumulated multi-turn session context. Candidate C (synthetic-first) is architecturally incompatible with triggering PreCompact. Candidate B (real-session dogfood during a near-limit interactive session) is required to validate A-003; candidate B requires CEO CCB-Light per charter.
 
 #### Implications
 
-TBD
+The synthetic harness approach (candidate C) cannot reach the AutoCompact trigger. This does NOT refute A-003 — it simply means the PreCompact hook's stdout-capture behavior is untestable in `--print` mode. Design implication: Stage 2 spec must assume the **safer design position** regardless of A-003 outcome: route handoff payload via **direct disk-write** in the PreCompact hook script (not via stdout/systemMessage), consistent with the T-1-7 finding that disk-write is the reliable side-channel. A-003 stdout-capture confirmation is a "nice to have" for design optimization (could allow smaller disk footprint), not a blocker for Stage 2.
+
+Additional finding: `--debug` does not emit `[DEBUG]` lines to stderr in `--print`/`-p` mode on claude 2.1.112. This affects T-1-3 and any future tasks that assume debug-stream hook lifecycle visibility in non-interactive mode.
+
+#### Escalation question
+
+> CEO decision required: Given candidate C (synthetic) is structurally incompatible with triggering PreCompact, and candidate B (real-session dogfood) requires a live near-limit session — should T-1-2/A-003 validation proceed via candidate B (CCB-Light required), OR should Stage 2 spec proceed with the conservative assumption "trust disk-write, do NOT rely on stdout" (which is the safer design choice regardless) and treat A-003 as permanently inconclusive? Recommended: adopt conservative assumption, close A-003 as "design-irrelevant inconclusive", proceed to Stage 2 without candidate B.
 
 ```jsonl
-{"claim_id":"FV-T-1-2","verdict":"pending","raid_links":["A-003"],"executed_at":"pending","owner":"RD","stage":1,"document":"phase-0-fact-validation"}
+{"claim_id":"FV-T-1-2","verdict":"inconclusive","raid_links":["A-003"],"executed_at":"2026-05-03T11:31:36+08:00","owner":"RD","stage":1,"document":"phase-0-fact-validation"}
 ```
 
 ---
@@ -241,32 +303,46 @@ TBD
 - `owner`: RD
 - `raid_links`: none
 - `raid_justification`: T-1-3 is internal hook-execution-ordering verification; no current RAID entry depends on it. If refuted, a new RAID-I is opened to capture the ordering risk for Stage 3 hook design.
-- `executed_at`: pending
+- `executed_at`: 2026-05-03T12:03–12:07+08:00 (S1-D6)
 
 #### Command
 
 ```bash
-# TBD by RD: trigger compact at session end with both PreCompact
-# and Stop hooks present; each hook writes a `date +%s.%N`
-# timestamp + identifier line; observe ordering.
+# hooks.json: PreCompact + Stop matchers pointing to timestamp-precompact.sh / timestamp-stop.sh
+# Each script: TS=$(gdate +%s%N || date +%s%N || date +%s); flock /tmp/t-1-3-race.lock bash -c "echo precompact|${TS} >> /tmp/t-1-3-race.log"
+# Loop 3 runs via: claude --plugin-dir /tmp/teamlead-probe-plugin --print "Say: hello"
+# (--debug dropped per I-014: not emitted in --print mode)
+# Evidence: docs/specs/phase-0-evidence/t-1-3.txt
 ```
 
 #### Actual output
 
 ```text
-TBD
+run=1: no race log — neither Stop nor PreCompact fired
+run=2: no race log — neither Stop nor PreCompact fired
+run=3: no race log — neither Stop nor PreCompact fired
+
+Root cause: --print mode is a zero-context one-shot invocation with no interactive session lifecycle.
+- PreCompact: no accumulated context to compact.
+- Stop: does not fire in --print mode on claude 2.1.112 (NEW finding beyond T-1-2).
+Both hooks require an interactive session to fire.
+
+gdate absent on host (macOS without coreutils); second-resolution date +%s used as fallback.
+Irrelevant since no hooks fired.
+
+Full evidence: docs/specs/phase-0-evidence/t-1-3.txt
 ```
 
 #### Verdict
 
-**TBD**
+**inconclusive** — neither Stop nor PreCompact fires in `--print` mode. Race ordering question is moot for synthetic invocations. Result is stronger than expected inconclusive path ("only Stop fires"): NEITHER hook fires. Re-validate in Stage 3 dogfood (real interactive session).
 
 #### Implications
 
-TBD
+Stage 2 design MUST default to **lock + idempotent** pattern (cannot rely on PreCompact-then-Stop ordering). Ordering will be validated empirically in Stage 3 dogfood; until then treat as non-deterministic. New finding: Stop hook does not fire in `--print` mode — affects T-1-4/T-1-5/T-1-6 if those tasks use Stop as a trigger event.
 
 ```jsonl
-{"claim_id":"FV-T-1-3","verdict":"pending","raid_links":[],"executed_at":"pending","owner":"RD","stage":1,"document":"phase-0-fact-validation"}
+{"claim_id":"FV-T-1-3","verdict":"inconclusive","raid_links":[],"executed_at":"2026-05-03T12:03+08:00","owner":"RD","stage":1,"document":"phase-0-fact-validation","notes":"neither Stop nor PreCompact fires in --print mode; re-validate in Stage 3 dogfood; Stop-in-print-mode new finding (I-015)"}
 ```
 
 ---
@@ -278,32 +354,38 @@ TBD
 - `claim_text`: A plugin-defined hook can write a file to `<project-root>/.teamlead/` (i.e., outside `${CLAUDE_PLUGIN_ROOT}`) and the file persists post-hook.
 - `owner`: RD
 - `raid_links`: A-002
-- `raid_justification`: n/a
-- `executed_at`: pending
+- `raid_justification`: A-002 validated — hook CAN write outside plugin root
+- `executed_at`: 2026-05-03T12:15:06+08:00
 
 #### Command
 
 ```bash
-# TBD by RD: hook attempts `echo "<probe>" > $PROJECT_ROOT/.teamlead/probe.txt`
-# then `ls -la $PROJECT_ROOT/.teamlead/probe.txt` post-hook.
+# SessionStart hook (bash ${CLAUDE_PLUGIN_ROOT}/scripts/cross-write.sh) writes:
+#   $CLAUDE_PROJECT_DIR/.teamlead-probe/probe.txt
+# triggered via: claude --plugin-dir /tmp/teamlead-probe-plugin --print "say hi"
+# (--debug dropped per I-014: suppressed in --print mode)
 ```
 
 #### Actual output
 
 ```text
-TBD
+ls -la /Users/HsuTse/ClaudeProject/teamwork-leader/.teamlead-probe/probe.txt
+-rw-r--r--  1 HsuTse  staff  188  May  3 12:15 .teamlead-probe/probe.txt
+
+cat probe.txt:
+wrote-from-hook ts=2026-05-03T12:15:06+08:00 cwd=/Users/HsuTse/ClaudeProject/teamwork-leader plugin_root=/tmp/teamlead-probe-plugin project_dir=/Users/HsuTse/ClaudeProject/teamwork-leader
 ```
 
 #### Verdict
 
-**TBD**
+**confirmed** — SessionStart hook successfully wrote to `$CLAUDE_PROJECT_DIR/.teamlead-probe/probe.txt` (outside `${CLAUDE_PLUGIN_ROOT}`). File persists post-hook. `$CLAUDE_PROJECT_DIR` resolved correctly to project root. `$CLAUDE_PLUGIN_ROOT` resolved correctly to `/tmp/teamlead-probe-plugin`.
 
 #### Implications
 
-TBD
+Stage 2 baton/gate.lock CAN live in `$CLAUDE_PROJECT_DIR/.teamlead/` (e.g., `.teamlead/baton.json`, `.teamlead/gate.lock`). No per-project symlink or state-server side-channel required for filesystem writes. A-002 is validated.
 
 ```jsonl
-{"claim_id":"FV-T-1-4","verdict":"pending","raid_links":["A-002"],"executed_at":"pending","owner":"RD","stage":1,"document":"phase-0-fact-validation"}
+{"claim_id":"FV-T-1-4","verdict":"confirmed","raid_links":["A-002"],"executed_at":"2026-05-03T12:15:06+08:00","owner":"RD","stage":1,"document":"phase-0-fact-validation","notes":"SessionStart hook writes to $CLAUDE_PROJECT_DIR outside plugin root; file persists; both env vars resolve correctly"}
 ```
 
 ---
@@ -353,32 +435,62 @@ TBD
 - `owner`: PO
 - `raid_links`: R-001
 - `raid_justification`: n/a
-- `executed_at`: pending
+- `executed_at`: 2026-05-03T14:10:00+08:00
 
 #### Command
 
 ```bash
-# TBD by PO: search Claude Code public changelog + docs + GitHub issues
-# for "resume" / "compact" / "session continuity"; cite specific entries
-# (URL + date) in actual_output.
+# PO-PM dispatch S1-D9 — WebFetch blocked (strict mode); all sources via WebSearch.
+# WebSearch queries executed:
+#   1. "claude code session resume cross-session continuity 2026"
+#   2. '"claude code" autocompact official roadmap 2026'
+#   3. "Anthropic Claude Code cross-session continuity announcement native feature"
+#   4. 'site:github.com anthropics/claude-code issues resume compact continuity 2026'
+#   5. 'github.com anthropics/claude-code "native resume" OR "pre-compact hook" issue 2026'
+# Sources: claudefa.st changelog, GitHub issues #52556/#44063/#55241/#46751/#21190/#18417,
+#          MacRumors April 2026 desktop app article, Nimbalyst community blog.
+# Full evidence: docs/specs/phase-0-evidence/t-1-6.txt §Source survey
 ```
 
 #### Actual output
 
 ```text
-TBD
+Key findings as of 2026-05-03:
+
+1. NO Anthropic-shipped native cross-session resume daemon or plugin-hook-orchestrated
+   compact recovery exists. Shipped features: --resume/-r (manual, by session ID),
+   --continue/-c (last session in cwd), Session Memory (~v2.1.30+, high-level memory
+   summarization). None covers: PreCompact baton-capture + daemon-detect + auto-relaunch.
+
+2. NO public Anthropic commitment with ETA for native cross-session resume:
+   - Issue #44063 (FEATURE: Resume Any CLI Session) — OPEN, no Anthropic response/ETA
+   - Issue #18417 (Native session persistence and context continuity) — OPEN, no ETA
+   - Issue #52556 (default resume behavior) — OPEN, no ETA
+   - Issue #21190 (pre-compact hook / include last N in compact summary) — OPEN, no ETA
+   All are community-initiated; no Anthropic team commitment found.
+
+3. Active development is around: AutoCompact buffer tuning (45K→33K), thrash detection,
+   bug fixes for resume hangs (issue #55241), desktop app session sidebar (April 2026).
+   Direction is incremental bugfix + UX polish — NOT native daemon-level orchestration.
+
+4. A-001 context (per FV-T-1-1 confirmed): `claude --resume <id> --print "<prompt>"`
+   works on claude 2.1.112. This REDUCES charter implementation risk — restore-leg CLI
+   primitive is natively available. Does not cover baton-capture or daemon trigger.
+
+5. Community signal: multiple third-party session managers exist (Nimbalyst 2026 roundup)
+   precisely because native cross-session continuity is absent — "a DIY exercise."
 ```
 
 #### Verdict
 
-**TBD**
+**confirmed** — No Anthropic-shipped or publicly-committed (ETA <6 months) native feature covers the charter's specific scope: (1) PreCompact hook-driven baton capture, (2) daemon detection of compact event, (3) automatic session re-launch via `claude --resume <id> -p "<restore-prompt>"`. Existing `--resume`, `--continue`, and Session Memory address individual-session manual resume and memory summarization only. Community feature requests for native cross-session continuity (issues #44063, #18417, #52556, #21190) are open with no Anthropic commitment or ETA as of 2026-05-03. Claim holds: charter investment will NOT be obsoleted within 6 months by a native Anthropic feature.
 
 #### Implications
 
-TBD
+n/a — confirms baseline assumption. Charter scope is NOT covered by any shipped or imminently-committed Anthropic native feature. R-001 risk assessment: LOW — proceed full charter. Revisit at Stage 3 close. The A-001 finding (--resume -p confirmed, FV-T-1-1) additionally REDUCES Stage 2/3 implementation risk by confirming the restore-leg CLI primitive is available natively (no need to build session-relaunch from scratch). R-001 recommended status: open (monitor-only).
 
 ```jsonl
-{"claim_id":"FV-T-1-6","verdict":"pending","raid_links":["R-001"],"executed_at":"pending","owner":"PO","stage":1,"document":"phase-0-fact-validation"}
+{"claim_id":"FV-T-1-6","verdict":"confirmed","raid_links":["R-001"],"executed_at":"2026-05-03T14:10:00+08:00","owner":"PO","stage":1,"document":"phase-0-fact-validation","notes":"no Anthropic-shipped or committed native cross-session resume daemon; community FRs open with no ETA; charter proceeds; A-001 reduce risk (restore-leg primitive available); R-001 monitor-only"}
 ```
 
 ---
@@ -486,10 +598,10 @@ n/a — confirms baseline assumption: hooks DO enforce timeouts (kill confirmed)
 |---|---|---|---|
 | FV-T-1-1 | TBD | A-001 | TBD |
 | FV-T-1-2 | TBD | A-003 | TBD |
-| FV-T-1-3 | TBD | (none — see record) | TBD |
-| FV-T-1-4 | TBD | A-002 | TBD |
+| FV-T-1-3 | inconclusive | (none) | Neither Stop nor PreCompact fires in --print mode; re-validate in Stage 3 dogfood; Stage 2 design: lock+idempotent |
+| FV-T-1-4 | confirmed | A-002 (validated) | No — baton/gate.lock may live in $CLAUDE_PROJECT_DIR/.teamlead/ |
 | FV-T-1-5 | TBD | (none — see record) | TBD |
-| FV-T-1-6 | TBD | R-001 | TBD |
+| FV-T-1-6 | confirmed | R-001 | No — no Anthropic-shipped/committed native cross-session resume; charter proceeds; R-001 monitor-only |
 | FV-T-1-7 | TBD | (none — see record) | TBD |
 
 **Overall report status**: PENDING (Stage 1 EXECUTING not yet run). At end of execution this MUST be one of:

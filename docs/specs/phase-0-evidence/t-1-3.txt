@@ -1,0 +1,48 @@
+# task: t-1-3
+# date: 2026-05-03T12:03:05+08:00
+# claude_version: 2.1.112 (Claude Code)
+# branch: feat/v0.1.7-auto-resume-daemon
+WARN: gdate absent; falling back to second-resolution date — race ordering may collide
+# run=1
+hello
+# race log run=1:
+(no race log — no hooks fired)
+# run=2
+hello
+# race log run=2:
+(no race log — no hooks fired)
+# run=3
+hello
+# race log run=3:
+(no race log — no hooks fired)
+
+=== CROSS-REFERENCE RESULTS ===
+run1_race_log: NOT PRESENT (no hooks fired)
+run2_race_log: NOT PRESENT (no hooks fired)
+run3_race_log: NOT PRESENT (no hooks fired)
+
+=== STRUCTURAL ANALYSIS ===
+Root cause: --print/-p mode is a one-shot fresh-context invocation (zero context per session).
+- PreCompact: does not fire (no accumulated context to compact) — confirmed by T-1-2 findings.
+- Stop: does not fire in --print mode on claude 2.1.112 — NEW finding for T-1-3.
+  Stop fires only when an interactive session ends. --print mode has no interactive session lifecycle.
+  Evidence: 3 runs, 0 Stop events in race log.
+
+Additional: gdate absent on this host (macOS without coreutils).
+Fallback to second-resolution `date +%s` was in effect for timestamp scripts.
+However, since no hooks fired at all, timestamp resolution was irrelevant.
+
+Also: `${CLAUDE_PLUGIN_ROOT}` expansion was replaced with absolute path
+(/tmp/teamlead-probe-plugin/scripts/...) as a defensive measure.
+This did not change the outcome — neither hook fired regardless of path style.
+
+=== VERDICT: inconclusive ===
+Both Stop and PreCompact hooks do NOT fire in --print mode.
+Race ordering question is moot for synthetic --print invocations.
+Per plan verdict criteria: "Compact does not trigger within session → only Stop fires in all three runs"
+was the expected inconclusive path; actual result is STRONGER: neither Stop nor PreCompact fires.
+This is consistent with T-1-2 structural blocker: --print mode has no session lifecycle events.
+Re-validate PreCompact + Stop ordering in Stage 3 dogfood (real interactive session).
+
+Stage 2 design implication: default to lock+idempotent design (safer pattern).
+Cannot rely on PreCompact-then-Stop sequence. Race ordering unknown from synthetic evidence.

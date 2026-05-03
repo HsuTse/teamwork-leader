@@ -1,0 +1,77 @@
+# task: resume-cost-baseline
+# date: 2026-05-03T11:19:26+08:00
+# claude_version: 2.1.112 (Claude Code)
+# branch: feat/v0.1.7-auto-resume-daemon
+
+# === Resume cost baseline — measurement #1 ===
+# Trigger: cross-session resume after pause-commit 6ea8b9a (feat/v0.1.7-auto-resume-daemon)
+# Operator: TeamLead session (manual baseline; Stage 4 daemon must beat this)
+
+resume_session_id: <new-session-after-2026-05-03T03:16:34Z>
+prior_pause_commit: 6ea8b9a
+branch_at_resume: feat/v0.1.7-auto-resume-daemon
+
+# --- Boot phase: /teamwork-leader invocation → first PM dispatch ready ---
+T0_first_action_utc: 2026-05-03T03:16:34Z
+T_ready_for_first_dispatch_utc: 2026-05-03T03:17:47Z
+wall_clock_seconds: 73
+wall_clock_human: ~1m13s
+
+# --- Tool call accounting (measurement window only; excludes pre-resume architecture browse) ---
+tool_calls_in_window: 11
+breakdown:
+  - 1 Bash (git status + log + ls gitignored artifacts) + 1 Read (memory v0.1.7)        # parallel x2
+  - 1 Skill (/teamwork-leader)                                                          # x1
+  - 6 Read (SKILL.md + stage-runbook.md + dispatch-header.md + PROGRESS.md + tasks.md + memory self-dogfood)  # parallel x6
+  - 1 Bash (audit-trail count + baseline file probe + T1 timestamp) + 1 ToolSearch (AskUserQuestion schema)   # parallel x2
+
+# --- Token cost (ESTIMATE — no in-band counter; based on file sizes loaded) ---
+kT_consumed_estimate: 35-45
+kT_breakdown_estimate:
+  - working-copy SKILL.md (157L) + stage-runbook.md (599L) + dispatch-header.md (243L): ~22 kT
+  - PROGRESS.md (121L) + tasks.md head (120L): ~5 kT
+  - memory project_v0.1.7-auto-resume-daemon.md + project_self-dogfood-discipline.md: ~3 kT
+  - bash + tool overhead + reasoning output: ~5-15 kT
+note: replace with exact figure from /context post-CEO-response
+
+# --- Resume mode behavior ---
+auto_detection_outcome: SUCCESS — PROGRESS.md detected with valid ## State / ## Active Stage / ## Last Action; runbook §Mode dispatch routed to Resume mode without ambiguity
+state_reconciliation_outcome: CLEAN — `## State: AWAITING_CEO (paused)` consistent with tasks.md "EXECUTING paused after 2/7"; no downgrade required
+manual_reconciliation_actions: NONE beyond cosmetic — Last Action ISO timestamps left as `<TBD>+08:00` placeholder (pre-existing from pause-commit), to be filled on first state-machine write
+
+# --- Cache vs working-copy isolation (Discipline 2 verification) ---
+cache_version_loaded_by_command: 0.1.5 (per commands/teamwork-leader.md Read paths)
+working_copy_version_in_use: 0.1.6 with v0.1.7 charter in flight
+isolation_intact: YES — used working-copy SKILL/runbook/dispatch-header per self-dogfood discipline; cache lag did not cause skew because reconciliation only reads PROGRESS.md content, no schema-version checks performed
+
+# --- gitignored artifact survival (Discipline 1 verification) ---
+PROGRESS_md_present: YES (13180 bytes, mtime 2026-05-03 10:54)
+tasks_md_present: YES (31675 bytes, mtime 2026-05-03 10:53)
+docs_audit_trail_jsonl_present: YES (7945 bytes, 11 lines, mtime 2026-05-03 10:53)
+docs_pre_task_estimates_jsonl_present: YES (1398 bytes, 4 lines, mtime 2026-05-03 10:49)
+git_status_clean_but_state_present: TRUE — Discipline 1 caveat held; ls -la was load-bearing
+
+# --- Stage 4 daemon target ---
+manual_baseline_to_beat:
+  wall_clock_seconds: 73
+  tool_calls: 11
+  kT_estimate: 35-45
+  human_intervention: 1 (CEO must answer Resume gate AskUserQuestion below; this measurement excludes wait-for-answer time)
+
+# === Post-AskUserQuestion: CEO Resume gate decision ===
+ceo_decision_q1_resume_gate: approve
+ceo_decision_q2_budget_posture: CCB-Heavy +50 kT now
+budget_action: Stage 1 baseline 100 kT → 150 kT (CCBH-001); pull from project contingency 120 kT → 70 kT
+state_machine_transition_planned: AWAITING_CEO → EXECUTING (S1-D5 queued, dispatch held pending operator confirmation due to 45-min time-box)
+
+# === Final tool-call accounting for full resume window (boot + state update + dispatch queue) ===
+tool_calls_total_through_dispatch_ready: 13
+note: 11 calls in measurement window (boot through baseline write) + 2 post-CEO-answer (this Bash batch + 5 sequential Edits + final AskUserQuestion outside window)
+
+# === Manual baseline summary (Stage 4 daemon target) ===
+[FROZEN] resume_to_first_dispatch_ready_seconds: 73
+[FROZEN] resume_to_first_dispatch_ready_tool_calls: 11
+[FROZEN] resume_to_first_dispatch_ready_kT_estimate: 35-45
+[FROZEN] auto_detect_resume_mode: SUCCESS
+[FROZEN] manual_reconciliation_needed: NONE
+[FROZEN] human_intervention_required: 1 (CEO answer to AskUserQuestion — measurement excludes wait-for-answer time)
