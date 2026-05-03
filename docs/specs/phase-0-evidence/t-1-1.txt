@@ -1,0 +1,25 @@
+# task: t-1-1
+# date: 2026-05-03T10:50:24+08:00
+# claude_version: 2.1.112 (Claude Code)
+# branch: feat/v0.1.7-auto-resume-daemon
+  --fork-session                                    When resuming, create a new session ID instead of reusing the original (use with --resume or --continue)
+  -p, --print                                       Print response and exit (useful for pipes). Note: The workspace trust dialog is skipped when Claude is run with the -p mode. Only use this flag in directories you trust.
+  -r, --resume [value]                              Resume a conversation by session ID, or open interactive picker with optional search term
+output_format_supported=1
+  --include-hook-events                             Include all hook lifecycle events in the output stream (only works with --output-format=stream-json)
+  --include-partial-messages                        Include partial message chunks as they arrive (only works with --print and --output-format=stream-json)
+  --output-format <format>                          Output format (only works with --print): "text" (default), "json" (single result), or "stream-json" (realtime streaming) (choices: "text", "json", "stream-json")
+  --replay-user-messages                            Re-emit user messages from stdin back on stdout for acknowledgment (only works with --input-format=stream-json and --output-format=stream-json)
+=== RAW SESSION A OUTPUT ===
+{"type":"result","subtype":"success","is_error":false,"api_error_status":null,"duration_ms":3010,"duration_api_ms":2698,"num_turns":1,"result":"acknowledged sentinel=T1-1-SENTINEL-1777776646","stop_reason":"end_turn","session_id":"cc291e76-4d87-4d0a-a689-19938c886995","total_cost_usd":0.45526125,"usage":{"input_tokens":6,"cache_creation_input_tokens":72717,"cache_read_input_tokens":0,"output_tokens":30,"server_tool_use":{"web_search_requests":0,"web_fetch_requests":0},"service_tier":"standard","cache_creation":{"ephemeral_1h_input_tokens":72717,"ephemeral_5m_input_tokens":0},"inference_geo":"","iterations":[{"input_tokens":6,"output_tokens":30,"cache_read_input_tokens":0,"cache_creation_input_tokens":72717,"cache_creation":{"ephemeral_5m_input_tokens":0,"ephemeral_1h_input_tokens":72717},"type":"message"}],"speed":"standard"},"modelUsage":{"claude-opus-4-7[1m]":{"inputTokens":6,"outputTokens":30,"cacheReadInputTokens":0,"cacheCreationInputTokens":72717,"webSearchRequests":0,"costUSD":0.45526125,"contextWindow":1000000,"maxOutputTokens":64000}},"permission_denials":[],"terminal_reason":"completed","fast_mode_state":"off","uuid":"9d1202a4-b612-421d-b9d5-1ef62ca633f0"}
+=== EXTRACTED SESSION_ID ===
+session_a=cc291e76-4d87-4d0a-a689-19938c886995 sentinel_a=T1-1-SENTINEL-1777776646
+=== STEP 3: RESUME SESSION-A WITH -p ===
+sentinel_b=T1-1-RESUME-PROBE-1777776668
+Sentinel: T1-1-SENTINEL-1777776646
+Received resume probe: T1-1-RESUME-PROBE-1777776668
+exit_code=0
+=== VERDICT ===
+verdict: confirmed
+implications: n/a — confirms baseline assumption: `claude --resume <id> --print "<prompt>"` works; prior context is loaded AND the new -p prompt is consumed as a new user turn. Both SENTINEL_A (prior context) and SENTINEL_B (new turn) appeared in step-3 stdout. Exit code 0. A-001 validated.
+session_ids_created: cc291e76-4d87-4d0a-a689-19938c886995 (session-A; leave for natural pruning)
