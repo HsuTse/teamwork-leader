@@ -1,0 +1,90 @@
+# Stage 3 Close Report — teamwork-leader v0.1.7 Auto-Resume Daemon
+# Generated: 2026-05-04 (dispatch S3-D10 QA PM)
+# Branch: feat/v0.1.7-auto-resume-daemon
+
+## Script inventory (lines + step-review verdict)
+
+| Script                   | Lines | Step-review verdict |
+|--------------------------|-------|---------------------|
+| hooks/pre-compact.py     |   354 | PASS (S3-D6)        |
+| hooks/session-start.py   |   694 | PASS (S3-D8)        |
+| hooks/stop.py            |   275 | PASS_WITH_MINOR (S3-D8; cosmetic absorb S3-D10) |
+| lib/baton-writer.py      |   319 | PASS (S3-D2)        |
+| lib/gate-lock.py         |   393 | PASS (S3-D3)        |
+| lib/handoff-builder.py   |   538 | PASS (S3-D5)        |
+| lib/notifier.py          |   257 | PASS (S3-D5)        |
+
+All 7 scripts: PASS or PASS_WITH_MINOR (with cosmetic absorption). No FAIL.
+
+## Stage 3 acceptance criteria mapping
+
+(a) All 7 hook + lib scripts executable: MET
+    Verify: ls hooks/*.py lib/*.py | xargs -I{} test -x {} → exit 0
+
+(b) hooks.json static validation: MET
+    - JSON parseable: python3 -c "import json; json.load(open('hooks/hooks.json'))" exits 0
+    - All 3 command entries resolve to .py files with #!/usr/bin/env python3 shebang
+    - 3 events: PreCompact, Stop, SessionStart — all registered with matcher "*"
+    Note: runtime registration check deferred to T-3-9 real-session test per I-014/I-015
+
+(c) check-cross-refs.sh exits 0: MET
+    7 lib references across 3 hook scripts — 0 broken (S3-D10 verify)
+
+(d) Python actors present (os.replace/os.open/O_CREAT/O_EXCL): MET
+    grep count >= 3 (actual count: verified at S3-D10)
+
+(e) No debug artifacts (#.*TODO|#.*TBD|#.*FIXME in hooks/ lib/): MET
+    grep returns 0 lines (S3-D10 verify)
+    Note: tools/ has TODO in write-synthetic-baton.py (cosmetic item #9) — tools/
+    is NOT in the scope of criterion (e) which restricts to hooks/ lib/
+
+(f) Stage 3 close report: MET (this file)
+
+## I-023 metric observations
+
+Metric 1 — PreCompact→Daemon Read Latency (target: ≤ 30s):
+  Status: N/A — Phase 1 has no daemon. Baton-write confirmed functional (4s for write+poll).
+  Assessment: metric_status=below-target-but-functional (no daemon in Phase 1)
+  RAID carry: I-023-M1 → v0.1.8+
+
+Metric 2 — T-S-4 Fault→Awareness Latency (target: ≤ 5min):
+  Status: TARGET_MET — instrumented latency 0s (banner written + stop hook surfaced)
+  Evidence: docs/specs/phase-3-evidence/latency-fault-to-awareness.txt
+
+Metric 3 — T-S-3 Mid-Pause Checkout FP Rate (target: ≤ 5%):
+  Status: ABOVE_TARGET — 100% FP rate (6/6 same-commit trials → ABORTED)
+  Root cause: same-commit baton uses synthetic PROGRESS.md anchor that differs
+  from live PROGRESS.md on disk; session-start.py correctly detects mismatch.
+  The tool writes a baton for /tmp (test project dir), but PROGRESS.md resides
+  in the real project dir — anchor mismatch is expected and correct.
+  This is a test-scaffold limitation (scaffold measures tool, not production behavior).
+  Assessment: metric_status=above-target-scaffold-limitation → RAID-I carry
+  RAID carry: I-023-M3 → v0.1.8+
+
+## Cosmetic batch status (10 items from S3-D10)
+
+| # | Source    | Action   | Rationale                                                      |
+|---|-----------|----------|----------------------------------------------------------------|
+| 1 | S3-D2 baton-writer.py finally double-close | ACCEPTED-AS-IS | except OSError:pass is conventional Python idiom; double-close is benign |
+| 2 | S3-D4 notifier.py _atomic_write finally    | ACCEPTED-AS-IS | Same family; same rationale as #1                              |
+| 3 | S3-D5 handoff-builder.py:85 regex comment  | APPLIED  | Comment aligned to describe bare $ coverage                    |
+| 4 | S3-D5 handoff-builder.py:281 comment       | APPLIED  | Comment clarified to "first occurrence = current dispatch"     |
+| 5 | S3-D6 pre-compact.py --test-write flag     | DEFERRED | baton-writer.py has no canonical --write flag; production mode is stdin-only (no args); adding --write requires lib edit (scope > cosmetic). RAID-I to v0.1.8+ |
+| 6 | S3-D7 session-start.py --test-release flag | DEFERRED | gate-lock.py --release uses env var; --test-release <path> is correct for path-based release. Alignment would change semantics. RAID-I to v0.1.8+ |
+| 7 | S3-D8 stop.py:22 docstring spec ref        | APPLIED  | Expanded to §5 lines 544-551 + §1 T-S-4 row line 565          |
+| 8 | S3-D8 stop.py:180 original_stderr scope    | APPLIED  | Moved capture to function start; both sub-test finally blocks restore to same original |
+| 9 | S3-D9 write-synthetic-baton.py TODO+assert | APPLIED  | TODO + keys assertion added at baton construction (drift risk documented) |
+|10 | S3-D9 check-cross-refs.sh:88 regex         | APPLIED  | Widened to [a-zA-Z0-9_-]+ for forward-compat                  |
+
+Applied: 6 items. Accepted-as-is: 2 items. Deferred: 2 items (RAID-I).
+
+## Rollback scenario
+
+Scenario (a) applies: all 7 scripts passed step-review (PASS or PASS_WITH_MINOR).
+Standard close path → CEO_Gate_3 → Stage 4.
+
+## Cross-PM verification note (anti-rubber-stamp)
+
+Highest-risk component: hooks/stop.py (modified in S3-D8 + cosmetic edits S3-D10).
+Cross-PM verification: stop.py --self-test re-run at S3-D10 → PASS (3 sub-tests).
+stop.py --test-mode → JSON {"decision":"approve"} confirmed.

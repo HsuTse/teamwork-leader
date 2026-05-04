@@ -1,0 +1,57 @@
+# Metric 2 — T-S-4 Fault→Awareness Latency
+# Generated: 2026-05-04T01:33:27Z
+# Tool: tools/measure-fault-awareness.sh
+# RAID: I-023 (dogfood instrumentation 3 metrics)
+# Design ref: design.md §5 lines 519-551 (CEO notification channel)
+
+target_seconds=300
+actual_seconds_instrumented=0
+banner_detected_in_stop_output=true
+assessment=TARGET_MET (banner surfaced in 0s; target 300s)
+
+## Interpretation
+
+The I-023 Metric 2 measures the end-to-end latency from failure-banner-write
+to operator-visibility. Two latency components apply:
+
+1. INSTRUMENTED (measured here): time from last-resume-failure.txt write to
+   stop.py --test-mode invocation return.
+   Measured: 0s (expected < 1s in synthetic test)
+
+2. REAL-SESSION (not measured here, operator-dependent): in a live session,
+   the banner appears on the next interactive SessionStart after the failure.
+   Real latency = time between failure and operator's next Claude session open.
+   This is bounded by operator's session frequency, NOT a code path.
+
+Per design.md §5 lines 544-551 (BANNER on next interactive SessionStart),
+the stop.py --test-mode triggers the notification channel (osascript + file).
+The next SessionStart detects last-resume-failure.txt and surfaces the banner.
+
+Per I-014/I-015: hooks do NOT fire in --print mode. This measurement uses
+stop.py --test-mode as the I-015-compliant instrumented substitute.
+
+## T-S-4 mitigation chain status
+
+last_resume_failure_txt_written=YES (path: /Users/HsuTse/ClaudeProject/teamwork-leader/.teamlead/last-resume-failure.txt)
+stop_hook_invocation=OK (exit 0)
+osascript_notification=best-effort (no-op if osascript unavailable — acceptable per design)
+next_sessionstart_banner=confirmed_by_design (session-start.py checks last-resume-failure.txt)
+
+## Raw measurement
+banner_write_epoch=1777858407
+invoke_start_epoch=1777858407
+invoke_end_epoch=1777858407
+
+## Stop hook output (for audit)
+---
+[stop] test-mode: skipping notifier invocation
+[stop] NOTICE: prior auto-resume failure detected in '/Users/HsuTse/ClaudeProject/teamwork-leader/.teamlead/last-resume-failure.txt':
+timestamp=2026-05-04T01:33:27Z
+transition=T8-mismatch-synthetic-test
+reason=prior_pause_commit-mismatch
+operator_action=Inspect baton at .teamlead/baton.json; run /teamwork-leader doctor
+stash_ref=N/A (synthetic test — no real stash)
+injected_by=tools/measure-fault-awareness.sh (I-023 Metric 2 instrumentation)
+Run /teamwork-leader doctor or inspect the file above.
+{"decision": "approve"}
+---

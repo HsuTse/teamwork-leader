@@ -81,7 +81,8 @@ _DISALLOWED_CHARS: re.Pattern[str] = re.compile(
     r"[`\x00\x01-\x08\x0b\x0c\x0e-\x1f\x7f]"
 )
 
-# Dollar sequences: bare $, ${...}, $(...)
+# Dollar sequences: bare $ (including bare dollar sign with no following char),
+# ${...} sequences, and $(...) sequences.
 _DOLLAR_SEQUENCES: re.Pattern[str] = re.compile(r"\$[\{(]?")
 
 
@@ -275,7 +276,9 @@ def _extract_last_dispatch_id(progress_md_path: str) -> str:
             else:
                 section = content[section_start:]
 
-            # Find last dispatch ID in section (last occurrence is most specific)
+            # Return the first occurrence of S<N>-D<M> in the Last Action section.
+            # "First occurrence" reflects the dispatch ID closest to the
+            # Last Action header (most recently logged dispatch).
             all_ids = dispatch_pattern.findall(section)
             if all_ids:
                 return all_ids[0]  # first occurrence = current dispatch
