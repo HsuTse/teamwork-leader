@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.teamwork-leader.auto-resume-daemon</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/env</string>
+        <string>python3</string>
+        <string>${CLAUDE_PLUGIN_ROOT}/scripts/daemon.py</string>
+        <string>--watch</string>
+        <string>${CLAUDE_PROJECT_DIR}/.teamlead/</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>${CLAUDE_PROJECT_DIR}</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>CLAUDE_PLUGIN_ROOT</key>
+        <string>${CLAUDE_PLUGIN_ROOT}</string>
+        <key>CLAUDE_PROJECT_DIR</key>
+        <string>${CLAUDE_PROJECT_DIR}</string>
+        <key>TEAMLEAD_DAEMON_VERSION</key>
+        <string>v0.1.7</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>WatchPaths</key>
+    <array>
+        <string>${CLAUDE_PROJECT_DIR}/.teamlead/</string>
+    </array>
+
+    <key>StandardOutPath</key>
+    <string>${CLAUDE_PROJECT_DIR}/.teamlead/daemon.out</string>
+
+    <key>StandardErrorPath</key>
+    <string>${CLAUDE_PROJECT_DIR}/.teamlead/daemon.err</string>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+</dict>
+</plist>

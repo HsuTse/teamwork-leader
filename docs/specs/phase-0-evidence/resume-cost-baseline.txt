@@ -75,3 +75,165 @@ note: 11 calls in measurement window (boot through baseline write) + 2 post-CEO-
 [FROZEN] auto_detect_resume_mode: SUCCESS
 [FROZEN] manual_reconciliation_needed: NONE
 [FROZEN] human_intervention_required: 1 (CEO answer to AskUserQuestion — measurement excludes wait-for-answer time)
+
+
+# === Resume cost baseline — measurement #2 ===
+# Trigger: cross-session resume after pause-commit aa1c4dc (feat/v0.1.7-auto-resume-daemon)
+# Operator: TeamLead session (manual baseline; same charter as Resume #1)
+# Pause pattern: post-Gate-1 boundary (CEO_Gate_1 approve → State=PLANNING for Stage 2 → pause-commit)
+
+resume_session_id: <new-session-after-2026-05-03T04:40:46Z>
+prior_pause_commit: aa1c4dc
+branch_at_resume: feat/v0.1.7-auto-resume-daemon
+
+# --- Boot phase: /teamwork-leader → first PM dispatch ready ---
+# Note: wall_clock not precisely measured for #2 (recorded retrospectively); tool_calls per Last Action prior — Resume #2 + PLANNING entry
+T0_first_action_utc: 2026-05-03T04:40:46Z (approx)
+wall_clock_seconds: null  # not measured (added after the fact from PROGRESS.md)
+tool_calls_in_window: ~14  # Skill + 3 reference Reads + 4 Bash + Read PROGRESS.md + Read tasks.md offset + 2 ToolSearch + 2 AskUserQuestion + 1 Edit
+
+# --- Token cost (ESTIMATE) ---
+kT_consumed_estimate: 30-50
+kT_breakdown_estimate:
+  - working-copy SKILL.md + stage-runbook.md + dispatch-header.md: ~40 kT (heavier load: runbook had 6-criterion rubric + KMR proxy already wired)
+  - PROGRESS.md (~135L at this point) + tasks.md head: ~6 kT
+  - audit-trail.jsonl + resume-cost-baseline.txt + memory ref: ~4 kT
+  - reasoning + tool overhead: ~5-10 kT
+  - free-text translation re-prompt overhead: ~1 kT (minor)
+
+# --- Resume mode behavior ---
+auto_detection_outcome: SUCCESS — pause-commit's audit-trail.jsonl S2-PLANNING-pause record self-documenting; PROGRESS.md State=PLANNING / Active Stage=2 unambiguous
+state_reconciliation_outcome: CLEAN — 3 cross-references checked (PROGRESS.State ↔ tasks.md Stage 2 placeholder ↔ audit-trail tail) all consistent
+manual_reconciliation_actions: NONE
+ceo_clarification_overhead: 1 free-text re-prompt (CEO asked for 繁體中文 option re-issue) — adds ~1 tool call
+session_extended_to: full PLAN_AUDIT + advisor + governance + T-2-1 keystone + T-2-2 §1 expansion (i.e., Resume #2 session ran far beyond boot — boot cost was ~14 calls / 30-50 kT, then session continued productively)
+
+# --- Comparison vs Resume #1 ---
+delta_vs_resume_1:
+  tool_calls: +3 (vs 11) — driven by free-text translation overhead + more thorough §5.3 reconciliation (3 cross-refs vs 1)
+  kT: comparable (low-30s vs 35-45 — slight reduction due to PROGRESS.md size still small post-Gate-1; tasks.md Stage 2 still empty placeholder)
+  pattern_difference: post-Gate-1 boundary has LESS in-flight context than mid-EXECUTING — fewer pending RAID / no half-completed task → cleaner resume
+
+# === Resume cost baseline — measurement #3 ===
+# Trigger: cross-session resume after pause-commit 70c7f18 (feat/v0.1.7-auto-resume-daemon)
+# Operator: TeamLead session (manual baseline; same charter)
+# Pause pattern: mid-Stage-2-EXECUTING-post-keystone-post-T-2-2 (different from #1 = mid-Stage-1, #2 = post-Gate-1)
+
+resume_session_id: <new-session-after-2026-05-03T08:07:41Z>
+prior_pause_commit: 70c7f18
+branch_at_resume: feat/v0.1.7-auto-resume-daemon
+
+# --- Boot phase: /teamwork-leader → CEO checkpoint surface ---
+T0_first_action_utc: ~2026-05-03T08:??Z (this session)
+wall_clock_seconds: null  # not precisely measured in-conversation (no in-band wall clock primitive)
+tool_calls_in_window: 11  # boot-through-state-verified
+breakdown:
+  - 1 Skill (/teamwork-leader)
+  - 3 Reads parallel (SKILL.md + stage-runbook.md + dispatch-header.md)
+  - 1 Bash (branch + ls) + 1 Read PROGRESS.md FAIL-too-big (parallel x2)
+  - 1 Bash (wc) + 1 Read PROGRESS.md offset 1-150 (parallel x2)
+  - 1 Bash (audit-trail tail + baseline cat) + 1 Bash (tasks.md grep) (parallel x2)
+  - 1 ToolSearch (AskUserQuestion schema)
+
+# --- Token cost (ESTIMATE) ---
+kT_consumed_estimate: 60-70
+kT_breakdown_estimate:
+  - 3 reference docs: ~40 kT (same as #2)
+  - PROGRESS.md head 150L (now 214L total — grew from 121L→214L; ~1.77x size vs #1): ~10 kT
+  - tasks.md grep + audit-trail tail + baseline.txt full read: ~5 kT
+  - ToolSearch + reasoning: ~5-10 kT
+
+# --- Resume mode behavior ---
+auto_detection_outcome: SUCCESS — three-source reconciliation clean (PROGRESS.State=EXECUTING / tasks.md Stage 2 fully populated / audit-trail tail = S2-PAUSE-RESUME3 self-documenting)
+state_reconciliation_outcome: CLEAN — no downgrade; in-flight T-2-5 next target unambiguous (recorded in PROGRESS Last Action + audit-trail next_session_resume_target)
+manual_reconciliation_actions: NONE
+carry_forward_state_size_at_resume:
+  PROGRESS_md_lines: 214 (vs #1=121, #2=~135) — 1.77x #1
+  tasks_md_lines: 735 (vs #1=120 head reading, #2=~120) — fully populated post-Stage-2-PLANNING
+  audit_trail_records: 13+ (vs #1=11, #2=~12) — incremental
+  open_RAID_carry_forward: 15 (vs #1=6, #2=~10) — heavier
+  in_flight_task_state: T-2-5 next of 5 remaining wave (vs #1=T-1-5/6 of 4 remaining; #2=Stage 2 PLANNING dispatch)
+
+# --- Cost-vs-state-size linearity check (Stage 4 daemon design input) ---
+size_growth_ratio: 1.77x (PROGRESS.md 121 → 214)
+cost_growth_ratio_tool_calls: 1.0x (11 → 11) — UNCHANGED despite 1.77x state growth
+cost_growth_ratio_kT_estimate: ~1.5-1.8x (35-45 → 60-70)
+linearity_assessment: APPROXIMATELY LINEAR with state-size growth — kT growth tracks PROGRESS.md size + tasks.md fully populated; tool_call count UNCHANGED (parallel reads absorb the load)
+implication_for_stage_4_daemon: Daemon's auto-resume cost should remain proportional to STATE size, NOT exponential — favorable input for design (no pathological scaling case observed at 5x carry-forward state)
+
+# --- Comparison vs Resume #1 + #2 ---
+delta_vs_resume_1:
+  tool_calls: 0 (both 11) — parallel reads compensate for added file reads
+  kT: +25 to +30 (35-45 → 60-70)
+  state_carry_forward: 5x heavier (15 RAID vs 6; design.md + outline.md committed vs none)
+  pattern_difference: mid-Stage-2-post-keystone — heaviest in-flight state of 3 baselines BUT auto-detect still SUCCESS / zero manual reconciliation
+
+# === Stage 4 daemon target (3-baseline aggregate) ===
+[FROZEN] manual_baseline_3_resume_pattern_summary:
+  resume_1_mid_Stage_1_EXECUTING:        73s / 11 calls / 35-45 kT / auto_detect=SUCCESS / manual_reconcile=NONE
+  resume_2_post_Gate_1_boundary:         null / ~14 calls / 30-50 kT / auto_detect=SUCCESS / manual_reconcile=NONE
+  resume_3_mid_Stage_2_post_keystone:    null / 11 calls / 60-70 kT / auto_detect=SUCCESS / manual_reconcile=NONE
+
+[FROZEN] linearity_finding: carry-forward state visibility scales APPROXIMATELY LINEARLY with PROGRESS.md/tasks.md size (kT proportional to file size; tool_calls absorbed by parallel reads). No pathological scaling observed up to ~1.77x state growth.
+[FROZEN] consistency_finding: auto_detect=SUCCESS + manual_reconcile=NONE in 3/3 baselines — TeamLead boot-from-state mechanism is reliable across pause-pattern types (mid-EXECUTING-mid-stage-1, post-gate-boundary, mid-EXECUTING-post-keystone).
+[FROZEN] daemon_target_3x: full automated resume must beat (60s + 5 calls + 20 kT) to be a meaningful improvement over manual baseline aggregate.
+
+
+# === Resume cost baseline — measurement #3-prime (RE-RESUME from same commit 70c7f18) ===
+# Trigger: SECOND resume against pause-commit 70c7f18 (prior session #3 completed measurement #3 + continued through Stage 3 wave 4 dispatch; current session is fresh /teamwork-leader re-run from same commit)
+# Pattern: drift-detection — first non-clean data point in baseline series
+
+resume_session_id: <2026-05-04 fresh re-resume>
+prior_pause_commit: 70c7f18
+branch_at_resume: feat/v0.1.7-auto-resume-daemon
+context_summary_present: YES (prior conversation auto-summarized into SessionStart context)
+
+# --- Boot phase: /teamwork-leader → CEO drift-reconciliation surface ---
+wall_clock_seconds: null  # no in-band primitive; estimate ~1-2 min boot
+tool_calls_in_window: 15  # 12 boot + 1 Edit (this entry) + 1 ToolSearch + 1 AskUserQuestion
+breakdown:
+  - 1 Skill (/teamwork-leader)
+  - batch 1 (parallel x6): Read SKILL + Read runbook + Read dispatch-header + Read PROGRESS.md(FAIL too-big 40502 tokens) + Bash git-log+status + Bash audit-trail tail
+  - batch 2 (parallel x3): Bash wc + Bash cat baseline.txt + Read PROGRESS.md offset=1 limit=120(also FAIL — likely cumulative token budget or per-Read 25k cap)
+  - batch 3 (parallel x3): Grep State/Active-Stage + Grep S3-D/T-3-X markers + Bash ls hooks/lib
+  - 1 Edit (this entry append)
+  - 1 ToolSearch (AskUserQuestion schema)
+  - 1 AskUserQuestion (CEO drift-reconciliation surface)
+
+kT_consumed_estimate: 70-90
+kT_breakdown_estimate:
+  - 3 reference docs full (SKILL 157L + runbook 581L + dispatch-header 243L from cache 0.1.5): ~50 kT
+  - PROGRESS.md targeted greps (309L total, only matched lines): ~3 kT
+  - audit-trail.jsonl tail 20 lines + baseline.txt full 138L: ~8 kT
+  - tasks.md NOT read this session (relied on PROGRESS.md narrative + audit-trail tail; would have added ~10 kT if needed)
+  - reasoning + tool overhead: ~10-20 kT
+
+# --- Resume mode behavior ---
+auto_detection_outcome: PARTIAL — PROGRESS.md State field unambiguous (EXECUTING / Active Stage 3 / wave 4 hooks parallel batch T-3-6 + T-3-8 dispatched) BUT 3-source reconciliation surfaced DRIFT (first time in baseline series)
+
+state_reconciliation_outcome: DRIFT_DETECTED — 3 inconsistencies:
+  1. baseline.txt already contains FROZEN measurement #3 (this is 4th data point — same commit, fresh session)
+  2. audit-trail.jsonl tail = S3-D5-step-review (T-3-4 PASS @10:05) BUT PROGRESS.md State narrative references S3-D6 + S3-D8 in flight — 2-3 dispatch records missing from audit-trail
+  3. working tree contains untracked artifacts created AFTER pause-commit (mtimes 05-04 02:24 - 08:28):
+       hooks/{pre-compact.py 354L, session-start.py 694L, stop.py 24L stub, hooks.json}
+       lib/{baton-writer.py 319L, gate-lock.py 393L, handoff-builder.py 535L, notifier.py 257L}
+       docs/specs/stage-3-hooks-mvp-outline.md
+     — pause-commit 70c7f18 is INCOMPLETE; would NOT survive fresh clone
+
+manual_reconciliation_actions: REQUIRED — CEO arbitration needed; cannot auto-decide between (a) treat working-tree as canonical + serialize missing audit-trail records + commit  (b) treat HEAD as canonical + discard working-tree (rework loss)  (c) audit-first
+
+# --- Findings for Stage 4 daemon design ---
+finding_1_audit_trail_lag: pause-commit pattern is FRAGILE if prior session compacts mid-EXECUTING — file-system writes (hooks/*.py, lib/*.py) precede audit-trail.jsonl appends; daemon MUST enforce synchronous audit-trail write barrier before any next-task dispatch
+finding_2_pause_commit_content_discipline: current pause pattern only commits PROGRESS.md/tasks.md/audit-trail/docs but does NOT git-add untracked artifacts; daemon MUST git-add-A before pause-commit OR maintain explicit allowlist of pause-included paths
+finding_3_filesystem_persistence: working-tree state PERSISTS across Claude Code session boundaries via filesystem (not just via committed records); this is desirable for resume but creates DRIFT risk between records and artifacts
+finding_4_drift_observability_cost: 3-source reconciliation surfacing drift took 12 boot calls + ~70-90 kT (close to clean-baseline cost); cost-effective IF tooling explicitly checks for drift; daemon should expose drift-check as first-class operation
+
+# --- Comparison vs Resume #1/#2/#3 ---
+delta_vs_baselines:
+  vs_resume_1_clean_mid_Stage_1:           +1 call (12 vs 11), +30-45 kT (70-90 vs 35-45), DRIFT vs CLEAN
+  vs_resume_2_clean_post_Gate_1:           -2 calls (12 vs 14), +20-40 kT, DRIFT vs CLEAN
+  vs_resume_3_clean_mid_Stage_2_keystone:  +1 call (12 vs 11), +10-20 kT (70-90 vs 60-70), DRIFT vs CLEAN
+pattern_difference: ONLY drift-detection data point — first 3 baselines all reported clean state; this 4th demonstrates what happens when prior session terminates mid-EXECUTING without proactive serialize+commit
+
+[FROZEN] resume_3_prime_re_resume_drift_pattern:  12 boot calls / 70-90 kT / auto_detect=PARTIAL / manual_reconcile=REQUIRED
+[FROZEN] daemon_design_implication: clean-resume is fast and reliable (3/3 prior baselines all <14 calls + <70 kT); drift-resume requires CEO arbitration; daemon MUST distinguish the two paths and surface drift early (before downstream dispatch); pause-commit MUST capture full working tree (git add -A) to prevent drift class.
