@@ -2,6 +2,31 @@
 
 All notable changes to the `/teamwork-leader` plugin documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) loosely; semver per `.claude-plugin/plugin.json`.
 
+## [0.1.8] — 2026-05-05
+
+### Added
+
+- `docs/specs/auto-resume-daemon-design.md §7 — Measurement Deferral & Shipping Constraint (v0.1.8 amendment)` — formal codification of v0.1.7 degraded-mode ship rationale. Documents (a) ≤30s threshold retained as ship gate, (b) measurement deferred to v0.1.9, (c) reference-host requirement (non-guarded macOS), (d) acceptance (d) degraded-mode = v0.1.7 ship rationale. CCB marker embedded.
+- `docs/archives/lessons-learned.v0.1.7.md` — formal persistence of L-1..L-4 from v0.1.7 ProjectClose audit-trail. L-2/L-4 inheritance notes use advisory language only (no v0.1.9 commitment); L-1/L-3 carry v0.1.9 measurement / reference-host reference.
+- `.claude-plugin/plugin.json` version 0.1.8.
+
+### Changed
+
+- `README.md` shipping caveat (line 105 area) expanded from one-liner to substantive 100+ word 繁中 paragraph with cross-refs to design.md §7 and lessons-learned.v0.1.7.md §L-1/§L-3.
+- `README.md` version badge 0.1.6 → 0.1.8 (skip-version intentional; see Why below).
+
+### Why
+
+v0.1.7 closed under acceptance (d) degraded-mode authorization because the developer host's bash-hook + launchctl-guard structurally blocked real launchd-load integration. The ≤30s baton-write→SESSION_RESUMED KPI was therefore **never measured** on any real host. v0.1.7 shipped without this gap being honestly inscribed into permanent project artifacts (only the close report mentioned it). v0.1.8 codifies the shipping constraint into design.md and creates a stable archival location for the LessonsLearned, so that v0.1.9 inheritors and external auditors cannot accidentally treat v0.1.7 as production-verified. Doc-only patch; no functional behavior change.
+
+### Migration
+
+None. Doc-only; no API / schema / behavior changes. Existing v0.1.7 installations continue to work; degraded-mode users remain in degraded-mode until v0.1.9 establishes a reference host.
+
+### Note: [0.1.7] CHANGELOG entry not back-filled
+
+`[0.1.7]` was never written into this CHANGELOG at v0.1.7 release — the auto-resume daemon feature shipped with the version badge / plugin.json bumped but the `## [0.1.7]` entry was omitted. The `[0.1.8]` entry above does NOT back-fill v0.1.7 content. The full v0.1.7 release record is preserved in `docs/archives/lessons-learned.v0.1.7.md`, `docs/archives/PROGRESS.v0.1.7.md`, and `docs/specs/phase-4-evidence/stage-4-close-report.txt`. Back-fill of `[0.1.7]` entry is deferred as an OPTIONAL future CCB-Light (per RAID-I I-2 in v0.1.8 charter).
+
 ## [0.1.6] — 2026-05-03
 
 ### Added
