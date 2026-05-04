@@ -2,7 +2,7 @@
 
 **Charter**: Measurement-Deferral Codification (single-stage doc-only patch)
 **Closed**: 2026-05-05
-**Stage 1 actual**: 98 kT vs 120 kT baseline (18% headroom)
+**Stage 1 actual**: `137 kT` vs `120 kT` baseline (+14% over; 22 kT contingency partially used)
 **Outcome**: APPROVED + shipped (tag v0.1.8 + PR #5 merged as `5c5e12b`)
 
 ---
@@ -11,7 +11,7 @@
 
 **Statement**: User issued anti-scope-creep mandate twice during Discovery (「盡量避免 Spec 被擴大」 × 2). TeamLead consulted Opus advisors before each Discovery question batch and surfaced scope-risk options explicitly (e.g., Q3 「本機 try-to-bypass」 flagged as #1 scope-creep risk by both Opus and TeamLead, leading user to switch from initial Q3 pick to (a) Defer + codify shipping constraint).
 
-**v0.1.8 disposition**: Held end-to-end. No measurement work. No L-2/L-4 codification. No new RAID-I beyond doc-blocking items. Doc-only patch shipped as designed.
+**v0.1.8 disposition**: Held end-to-end. No measurement work. No new RAID-I beyond doc-blocking items. Doc-only patch shipped as designed.
 
 **v0.1.9 inheritance**: Mandate carries forward. v0.1.9 charter (when authored) MUST address measurement on a non-guarded reference host as the first-action; expansion beyond measurement is CCB-Heavy.
 
@@ -45,9 +45,9 @@
 
 ## L-4: KMR Mini Gate firing without trust_tier change is a feature, not a bug
 
-**Statement**: Stage 1 saw 1 KMR fire (T-1-3, proxy=9, root_cause=budget_underestimate; 18 kT actual vs 8 kT expected = 2.25× overrun). Mini Gate verdict PASS via direct artifact verification. No trust_tier change because TeamLead Rule 2 + Sonnet step-review had already double-verified the artifact prior to the fire.
+**Statement**: Stage 1 saw `2` KMR fires (`T-1-3` proxy=9, `T-1-5` proxy=5; both root_cause=budget_underestimate, both budget_surprise signals from RD plan estimate underestimation). Mini Gate verdict PASS for both via direct Bash verify. No trust_tier change because TeamLead Rule 2 + Sonnet step-review had already double-verified each artifact prior to the fires.
 
-**v0.1.8 disposition**: Mini Gate worked as designed — caught the 2.25× budget overrun signal but didn't trigger trust_tier downgrade because verification chain was already redundant.
+**v0.1.8 disposition**: Mini Gate worked as designed — caught both budget overruns (T-1-3: 2.25×; T-1-5: ~1.5×) but neither triggered trust_tier downgrade because verification chain was already redundant.
 
 **v0.1.9 inheritance**: KMR proxy thresholds calibrated correctly for doc-only charters; no recalibration needed for v0.1.9.
 
@@ -59,10 +59,10 @@
 
 | Metric | Baseline | Actual | Delta |
 |---|---|---|---|
-| Stage 1 budget | 120 kT | 98 kT | -18% (under) |
+| Stage 1 budget | `120 kT` | `137 kT` | +14% (over; contingency partially used) |
 | Tasks executed | 8 | 8 | 0 |
-| Schema validation pass-on-first | 8/8 | 7/8 | -1 (T-1-4 retried) |
-| KMR fires | unknown | 1 | — |
+| Schema validation pass-on-first | 8/8 | 7/8 | -1 (`T-1-4` retried) |
+| KMR fires | n/a baseline | 2 (`T-1-3`, `T-1-5`) | both budget_surprise; verdict PASS |
 | Step-review failures | 0 | 0 | 0 |
 | Opus PLAN_AUDIT verdict | APPROVED | APPROVED_WITH_REVISIONS | revisions applied |
 | Opus final review verdict | APPROVED | APPROVED | 0 issues |
@@ -74,7 +74,7 @@
 
 - I-023-M1 measurement on non-guarded reference host (PRIMARY blocker for v0.1.9 ship)
 - L-2/L-4 normative codification (deferred from v0.1.8 by anti-scope-creep mandate)
-- v0.1.7 CHANGELOG back-fill (optional CCB-Light, deferred per RAID-I I-2 + v0.1.8 CHANGELOG Note subsection)
+- v0.1.7 CHANGELOG back-fill (optional CCB-Light, deferred per RAID-I I-2)
 
 ---
 
