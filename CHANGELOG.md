@@ -6,7 +6,7 @@ All notable changes to the `/teamwork-leader` plugin documented here. Format fol
 
 ### Added
 
-- `docs/specs/auto-resume-daemon-design.md §7 — Measurement Deferral & Shipping Constraint (v0.1.8 amendment)` — formal codification of v0.1.7 degraded-mode ship rationale. Documents (a) ≤30s threshold retained as ship gate, (b) measurement deferred to v0.1.9, (c) reference-host requirement (non-guarded macOS), (d) acceptance (d) degraded-mode = v0.1.7 ship rationale. CCB marker embedded.
+- `docs/specs/auto-resume-daemon-design.md §7 — Measurement Deferral & Shipping Constraint (v0.1.8 amendment)` — formal codification of v0.1.7 degraded-mode ship rationale. Documents (a) ≤30s threshold retained as ship gate, (b) measurement deferred to v0.1.9, (c) reference-host requirement (non-guarded macOS), (d) degraded-mode acceptance path = v0.1.7 ship rationale. CCB marker embedded.
 - `docs/archives/lessons-learned.v0.1.7.md` — formal persistence of L-1..L-4 from v0.1.7 ProjectClose audit-trail. L-2/L-4 inheritance notes use advisory language only (no v0.1.9 commitment); L-1/L-3 carry v0.1.9 measurement / reference-host reference.
 - `.claude-plugin/plugin.json` version 0.1.8.
 
