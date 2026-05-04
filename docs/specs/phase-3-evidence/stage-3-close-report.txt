@@ -52,14 +52,19 @@ Metric 2 — T-S-4 Fault→Awareness Latency (target: ≤ 5min):
   Evidence: docs/specs/phase-3-evidence/latency-fault-to-awareness.txt
 
 Metric 3 — T-S-3 Mid-Pause Checkout FP Rate (target: ≤ 5%):
-  Status: ABOVE_TARGET — 100% FP rate (6/6 same-commit trials → ABORTED)
-  Root cause: same-commit baton uses synthetic PROGRESS.md anchor that differs
-  from live PROGRESS.md on disk; session-start.py correctly detects mismatch.
-  The tool writes a baton for /tmp (test project dir), but PROGRESS.md resides
-  in the real project dir — anchor mismatch is expected and correct.
-  This is a test-scaffold limitation (scaffold measures tool, not production behavior).
-  Assessment: metric_status=above-target-scaffold-limitation → RAID-I carry
-  RAID carry: I-023-M3 → v0.1.8+
+  Status: TARGET_MET — 0% FP rate (6/6 same-commit trials → VALIDATED;
+  6/6 divergent trials → ABORTED at correct mismatch field)
+  Evidence: docs/specs/phase-3-evidence/false-positive-checkout.txt (production-representative)
+  Env contract: CLAUDE_PROJECT_DIR must point to project containing PROGRESS.md
+  (default in measure-checkout-fp.sh now PLUGIN_ROOT for self-dogfood, NOT
+  parent dir — fixed at S3-D10-followup per I-045 step-review concur).
+  Note: prior 100% ABOVE_TARGET measurement (commit 81c5eec evidence) was an
+  artifact of the parent-dir fallback default — synthetic anchor "a"*64 vs
+  live anchor mismatch caused all same-commit trials to ABORT. Bug fixed in
+  measure-checkout-fp.sh:69 + --help env contract documented.
+  Assessment: metric_status=TARGET_MET (production-representative)
+  RAID closure: I-023-M3 closed (target met under correct env contract)
+  RAID open: I-045 (env-var-fallback fix applied; close-out at this commit)
 
 ## Cosmetic batch status (10 items from S3-D10)
 

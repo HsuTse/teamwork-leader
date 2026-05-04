@@ -1,5 +1,5 @@
 # Metric 3 — T-S-3 Mid-Pause Checkout False-Positive Rate
-# Generated: 2026-05-04T04:46:02Z
+# Generated: 2026-05-04T04:56:00Z
 # Tool: tools/measure-checkout-fp.sh
 # RAID: I-023 (dogfood instrumentation 3 metrics)
 # Design ref: design.md §5 T-S-3 + §1 T8 (4-field re-validation)
@@ -7,11 +7,11 @@
 total_trials=12
 same_commit_trials=6
 divergent_trials=6
-false_positive_count=6
+false_positive_count=0
 false_negative_count=0
-false_positive_rate_pct=100
+false_positive_rate_pct=0
 target_false_positive_rate_pct=5
-assessment=ABOVE_TARGET (100% > 5%) — RAID-I carry
+assessment=TARGET_MET (0% <= 5%)
 
 ## Interpretation
 
@@ -27,12 +27,12 @@ Target <= 5% false-positive rate. False negatives are carried as RAID-A
 
 ## Trial log
 
-Trial SC-1 [same-commit/none]: ABORTED (FALSE POSITIVE)
-Trial SC-2 [same-commit/none]: ABORTED (FALSE POSITIVE)
-Trial SC-3 [same-commit/none]: ABORTED (FALSE POSITIVE)
-Trial SC-4 [same-commit/none]: ABORTED (FALSE POSITIVE)
-Trial SC-5 [same-commit/none]: ABORTED (FALSE POSITIVE)
-Trial SC-6 [same-commit/none]: ABORTED (FALSE POSITIVE)
+Trial SC-1 [same-commit/none]: VALIDATED (PASS)
+Trial SC-2 [same-commit/none]: VALIDATED (PASS)
+Trial SC-3 [same-commit/none]: VALIDATED (PASS)
+Trial SC-4 [same-commit/none]: VALIDATED (PASS)
+Trial SC-5 [same-commit/none]: VALIDATED (PASS)
+Trial SC-6 [same-commit/none]: VALIDATED (PASS)
 Trial DV-1 [divergent/prior_pause_commit]: ABORTED (PASS — correct rejection)
 Trial DV-2 [divergent/branch]: ABORTED (PASS — correct rejection)
 Trial DV-3 [divergent/progress_md_anchor]: ABORTED (PASS — correct rejection)

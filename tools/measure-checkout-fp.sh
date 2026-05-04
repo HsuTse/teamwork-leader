@@ -53,7 +53,16 @@ OPTIONS
 
 ENVIRONMENT
   CLAUDE_PLUGIN_ROOT   Plugin root directory (default: parent of this script)
-  CLAUDE_PROJECT_DIR   Project workspace (default: plugin root's parent)
+  CLAUDE_PROJECT_DIR   Project workspace where .teamlead/ lives + PROGRESS.md
+                       resides for synthetic-anchor recomputation. **MUST be set
+                       to the project root that contains PROGRESS.md** for
+                       production-representative measurement. Default is
+                       PLUGIN_ROOT (self-dogfood; plugin source is its own
+                       project). If set to a dir without PROGRESS.md, synthetic
+                       anchor falls back to "a"*64, which mismatches whatever
+                       session-start.py recomputes — yielding 100% FP rate
+                       (scaffold-edge-case, NOT production signal). Env-var
+                       contract documented per S3-D10-step-review I-045.
 
 EXIT CODES
   0   Evidence written; false-positive rate <= 5%
@@ -66,7 +75,10 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(dirname "$SCRIPT_DIR")}"
-PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$(dirname "$PLUGIN_ROOT")}"
+# Default PROJECT_DIR to PLUGIN_ROOT (self-dogfood) NOT $(dirname "$PLUGIN_ROOT")
+# per I-045: production code uses CLAUDE_PROJECT_DIR set by Claude Code at runtime;
+# parent-dir fallback was a scaffold bug producing artifactual 100% FP measurements.
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-$PLUGIN_ROOT}"
 SELF_TEST="${1:-}"
 
 SESSION_START="$PLUGIN_ROOT/hooks/session-start.py"
