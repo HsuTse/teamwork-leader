@@ -10,8 +10,14 @@
 #   This script records target=30s / actual=N/A (no-daemon-Phase-1) and
 #   carries the actionable metric to v0.1.8+ as RAID-I.
 #
+# Stage 4 extension (AC-4-F / I-046 resolution):
+#   --dry-run flag: synthetic CI mode. Skips real baton-writer invocation;
+#   emits a JSON record with daemon_present field to stdout. Evidence file
+#   written to docs/specs/phase-4-evidence/latency-daemon-present.txt.
+#   Existing invocation without --dry-run retains pre-Stage-4 behavior.
+#
 # Usage:
-#   bash tools/measure-latency.sh [--help] [--self-test]
+#   bash tools/measure-latency.sh [--help] [--self-test] [--dry-run]
 #
 # Environment:
 #   CLAUDE_PLUGIN_ROOT     Plugin root (default: parent of this script)
@@ -27,7 +33,7 @@ if [[ "${1:-}" == "--help" ]]; then
 measure-latency.sh — Metric 1: PreCompact→daemon read latency (I-023)
 
 USAGE
-  bash tools/measure-latency.sh [--help] [--self-test]
+  bash tools/measure-latency.sh [--help] [--self-test] [--dry-run]
 
 DESCRIPTION
   Writes a test baton to .teamlead/baton.json via lib/baton-writer.py --write,
@@ -38,9 +44,15 @@ DESCRIPTION
   Target: <= 30s. In Phase 1 MVP (v0.1.7) no daemon is present; the script
   records N/A and carries the measurement to v0.1.8+ via RAID-I.
 
+  --dry-run mode (Stage 4 / AC-4-F): synthetic CI mode. Skips real baton-writer
+  invocation; emits a JSON record with daemon_present field to stdout and writes
+  evidence to docs/specs/phase-4-evidence/latency-daemon-present.txt.
+
 OPTIONS
   --self-test   Run in synthetic self-test mode; exits 0 if baton-writer
                 invocation succeeds and evidence file is written.
+  --dry-run     Stage 4 synthetic CI mode: emit JSON record with daemon_present
+                field; write evidence to phase-4-evidence/. Exits 0.
   --help        Show this message.
 
 ENVIRONMENT
@@ -68,6 +80,67 @@ BATON_PATH="$TEAMLEAD_DIR/baton.json"
 EVIDENCE_DIR="$PLUGIN_ROOT/docs/specs/phase-3-evidence"
 EVIDENCE_FILE="$EVIDENCE_DIR/latency-precompact-to-daemon.txt"
 POLL_TIMEOUT="${LATENCY_POLL_TIMEOUT:-30}"
+
+# ── Stage 4 --dry-run path (AC-4-F / I-046 resolution) ───────────────────────
+# Additive extension: existing invocation without --dry-run is unchanged.
+
+if [[ "${1:-}" == "--dry-run" ]]; then
+  DRY_RUN_EVIDENCE_DIR="$PLUGIN_ROOT/docs/specs/phase-4-evidence"
+  DRY_RUN_EVIDENCE_FILE="$DRY_RUN_EVIDENCE_DIR/latency-daemon-present.txt"
+  mkdir -p "$DRY_RUN_EVIDENCE_DIR"
+
+  DRY_RUN_ISO_NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  DRY_RUN_START_TS="$(date +%s)"
+
+  # daemon_present: check if scripts/daemon.py exists (Stage 4 artifact)
+  DAEMON_PRESENT="false"
+  if [[ -f "$PLUGIN_ROOT/scripts/daemon.py" ]]; then
+    DAEMON_PRESENT="true"
+  fi
+
+  # Synthetic: no baton-writer invocation; simulate gate_state poll cycle
+  DRY_RUN_END_TS="$(date +%s)"
+  DRY_RUN_WALL_CLOCK=$((DRY_RUN_END_TS - DRY_RUN_START_TS))
+
+  # Emit JSON record with daemon_present field (AC-4-F design.md line 542)
+  JSON_RECORD="{\"tool\":\"measure-latency.sh\",\"mode\":\"dry-run\",\"timestamp\":\"$DRY_RUN_ISO_NOW\",\"daemon_present\":$DAEMON_PRESENT,\"target_seconds\":30,\"actual_seconds\":\"N/A-dry-run\",\"wall_clock_seconds\":$DRY_RUN_WALL_CLOCK,\"gate_state_observed\":\"SYNTHETIC-DRY-RUN\",\"metric\":\"I-023-M1\"}"
+  echo "$JSON_RECORD"
+
+  # Write plain-text evidence file for phase-4-evidence/
+  cat > "$DRY_RUN_EVIDENCE_FILE" <<DRYEOF
+# Metric 1 — PreCompact→Daemon Read Latency (Stage 4 / AC-4-F / daemon-present)
+# Generated: $DRY_RUN_ISO_NOW
+# Tool: tools/measure-latency.sh --dry-run
+# RAID: I-023-M1 (dogfood instrumentation; I-046 inline resolution)
+# Mode: dry-run (synthetic CI — no real baton-writer invocation)
+
+daemon_present=$DAEMON_PRESENT
+target_seconds=30
+actual_seconds=N/A-dry-run (synthetic mode; real measurement requires live daemon poll)
+wall_clock_seconds=$DRY_RUN_WALL_CLOCK
+gate_state_observed=SYNTHETIC-DRY-RUN
+
+## Interpretation
+
+--dry-run mode skips real baton-writer invocation and daemon poll cycle.
+daemon_present=$DAEMON_PRESENT reflects whether scripts/daemon.py exists in this Stage 4 build.
+
+The real daemon-present M1 latency measurement (baton-write to gate_state=SESSION_RESUMED)
+requires a live daemon polling loop. This dry-run confirms:
+  - measure-latency.sh --dry-run flag is functional (exit 0)
+  - daemon_present field is correctly emitted in JSON record
+  - phase-4-evidence/ directory is writable
+
+## RAID carry
+
+I-023-M1 (actual baton-write→SESSION_RESUMED wall-clock ≤ 30s) is measured by
+running the daemon poll live (non-dry-run) with daemon.py active.
+Below-target → carry to v0.1.8+ per Stage 3 close report precedent.
+DRYEOF
+
+  echo "measure-latency: --dry-run PASS (daemon_present=$DAEMON_PRESENT; evidence=$DRY_RUN_EVIDENCE_FILE)"
+  exit 0
+fi
 
 # ── validate dependencies ─────────────────────────────────────────────────────
 

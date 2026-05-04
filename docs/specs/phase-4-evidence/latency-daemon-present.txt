@@ -1,0 +1,28 @@
+# Metric 1 — PreCompact→Daemon Read Latency (Stage 4 / AC-4-F / daemon-present)
+# Generated: 2026-05-04T07:17:22Z
+# Tool: tools/measure-latency.sh --dry-run
+# RAID: I-023-M1 (dogfood instrumentation; I-046 inline resolution)
+# Mode: dry-run (synthetic CI — no real baton-writer invocation)
+
+daemon_present=true
+target_seconds=30
+actual_seconds=N/A-dry-run (synthetic mode; real measurement requires live daemon poll)
+wall_clock_seconds=0
+gate_state_observed=SYNTHETIC-DRY-RUN
+
+## Interpretation
+
+--dry-run mode skips real baton-writer invocation and daemon poll cycle.
+daemon_present=true reflects whether scripts/daemon.py exists in this Stage 4 build.
+
+The real daemon-present M1 latency measurement (baton-write to gate_state=SESSION_RESUMED)
+requires a live daemon polling loop. This dry-run confirms:
+  - measure-latency.sh --dry-run flag is functional (exit 0)
+  - daemon_present field is correctly emitted in JSON record
+  - phase-4-evidence/ directory is writable
+
+## RAID carry
+
+I-023-M1 (actual baton-write→SESSION_RESUMED wall-clock ≤ 30s) is measured by
+running the daemon poll live (non-dry-run) with daemon.py active.
+Below-target → carry to v0.1.8+ per Stage 3 close report precedent.

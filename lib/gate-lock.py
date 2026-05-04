@@ -332,12 +332,12 @@ def main() -> None:
     if not args:
         print(
             "Usage:\n"
-            "  gate-lock.py --acquire <holder_role>            # production acquire\n"
-            "  gate-lock.py --release                          # production release\n"
-            "  gate-lock.py --test-acquire <path> <holder_role> # test acquire at path\n"
-            "  gate-lock.py --test-release <path>              # test release at path\n"
-            "  gate-lock.py --reap                             # production reap\n"
-            "  gate-lock.py --self-test                        # self-test suite",
+            "  gate-lock.py --acquire <holder_role>              # production acquire\n"
+            "  gate-lock.py --release                            # production release\n"
+            "  gate-lock.py --test-acquire <path> <holder_role>  # test acquire at path\n"
+            "  gate-lock.py --test-release <path>                # test release at path\n"
+            "  gate-lock.py --reap [<lock_path>]                 # reap stale lock (path optional; default: env-var)\n"
+            "  gate-lock.py --self-test                          # self-test suite",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -374,7 +374,12 @@ def main() -> None:
         release(args[1])
 
     elif cmd == "--reap":
-        lock_path = _resolve_production_lock_path()
+        # Accept optional explicit lock_path arg (design.md line 304; T-4-6 / I-049).
+        # Falls back to env-var production path when no arg supplied (existing behaviour).
+        if len(args) >= 2:
+            lock_path = args[1]
+        else:
+            lock_path = _resolve_production_lock_path()
         reaped = reap(lock_path)
         if reaped:
             print("Reaper: stale lock removed", file=sys.stderr)

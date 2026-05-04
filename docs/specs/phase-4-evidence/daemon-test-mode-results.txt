@@ -1,0 +1,54 @@
+# daemon.py --test-mode CI Results
+# Generated: 2026-05-04T07:12:38Z
+# Tool: scripts/daemon.py --watch <dir> --test-mode
+# Dispatch: S4-D9
+
+## Sub-flag: --self-test-t5
+exit_code=0
+[daemon T5] INFO: --self-test-t5: skip spawn, simulating SESSION_RESUMED
+[daemon T5] INFO: gate_state updated to SESSION_RESUMED
+gate_state=BATON_WRITTEN
+schema=valid
+[daemon --self-test-t5] gate_state=SESSION_RESUMED
+result=PASS
+
+## Sub-flag: --self-test-t6-exhaust
+exit_code=0
+[daemon T6] WARNING: spawn attempt 1/3 failed: simulated failure (--self-test-t6-exhaust)
+[daemon T6] INFO: retry 1/2 — sleeping 0.001s before spawn
+[daemon T6] WARNING: spawn attempt 2/3 failed: simulated failure (--self-test-t6-exhaust)
+[daemon T6] INFO: retry 2/2 — sleeping 0.001s before spawn
+[daemon T6] WARNING: spawn attempt 3/3 failed: simulated failure (--self-test-t6-exhaust)
+[daemon T6] ERROR: retry 3 exhausted
+[daemon T7] ERROR: retries_exhausted — entering ABORTED: claude spawn failed after 3 retries
+[daemon T7] INFO: gate_state updated to ABORTED
+[daemon T7] INFO: clean exit after ABORTED
+gate_state=BATON_WRITTEN
+schema=valid
+[daemon --self-test-t6-exhaust] retry_counter=3
+result=PASS
+
+## Sub-flag: --self-test-t7-abort
+exit_code=0
+[daemon T7] ERROR: retries_exhausted — entering ABORTED: self-test-t7-abort: direct T7 exercise
+[daemon T7] INFO: gate_state updated to ABORTED
+[daemon T7] INFO: clean exit after ABORTED
+gate_state=BATON_WRITTEN
+schema=valid
+result=PASS
+
+## Sub-flag: --self-test-pid
+exit_code=0
+pid-file=/var/folders/bv/d3zfzkj16211cjssvmdz5cq80000gp/T/.teamlead/daemon.pid
+perms=0600
+[daemon --self-test-pid] PASS: pid=79546 file=/var/folders/bv/d3zfzkj16211cjssvmdz5cq80000gp/T/.teamlead/daemon.pid perms=0600
+result=PASS
+
+## Sub-flag: --self-test-reaper
+exit_code=0
+[daemon --self-test-reaper] reaper invoked for /var/folders/bv/d3zfzkj16211cjssvmdz5cq80000gp/T/test-daemon-ci-ul7tbft_
+result=PASS
+
+
+## Summary
+All 5 sub-flags executed. See result=PASS lines above.

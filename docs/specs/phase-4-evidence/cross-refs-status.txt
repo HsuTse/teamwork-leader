@@ -1,0 +1,24 @@
+# Cross-References Status — Stage 4
+# Generated: 2026-05-04T07:13:14Z
+# Tool: tools/check-cross-refs.sh
+# Dispatch: S4-D9
+
+exit_code=0
+references_checked=7
+broken=0
+
+## Detail
+
+[pre-compact.py] lib/baton-writer.py → OK
+[pre-compact.py] lib/gate-lock.py → OK
+[pre-compact.py] lib/handoff-builder.py → OK
+[pre-compact.py] lib/notifier.py → OK
+[session-start.py] lib/gate-lock.py → OK
+[session-start.py] lib/notifier.py → OK
+[stop.py] lib/notifier.py → OK
+
+## Verdict
+
+check-cross-refs.sh exits 0 after Stage 4 scripts/ additions (daemon.py added;
+install.py in-flight from S4-D8 parallel dispatch). No broken hook→lib refs.
+I-033 mitigation confirmed functional for Stage 4.

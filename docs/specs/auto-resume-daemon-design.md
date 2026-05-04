@@ -412,6 +412,184 @@ The relevant launchd-side commands referenced from §6 are:
 - **Uninstall**: `launchctl bootout gui/$UID/com.teamwork-leader.auto-resume-daemon` followed by removing the plist file
 - **Probe-trigger** (for §6 verification step): `touch ${CLAUDE_PROJECT_DIR}/.teamlead/install-probe.json` — daemon's WatchPaths fires, daemon writes back to the probe file with PID + timestamp; user-visible verification per I-001 mitigation
 
+### daemon.py contract
+
+`daemon.py` is the single Python script supervised by the above plist. It is the **sole actor** for §1 transitions T5 (`BATON_WRITTEN` → `SESSION_RESUMED`), T6 (retry within `BATON_WRITTEN`), T7 (retry-exhausted → `ABORTED`), and the daemon-side branch of T11 (stale-lock reaper sweep). All other transitions (T1–T4 owned by the PreCompact hook; T8–T10 owned by the SessionStart hook) are outside daemon.py's responsibility.
+
+**Canonical path**: `${CLAUDE_PLUGIN_ROOT}/scripts/daemon.py`
+
+**I-018 compliance mandate**: daemon.py is a state-changing actor and MUST be Python (not bash). All file-system state mutations MUST happen via subprocess invocations to the existing libs in `lib/`, NOT by importing them as Python modules. Rationale: lib scripts have their own CLI contract and test mode; bypassing their CLI surface breaks I-018's actor symmetry and makes the subprocess-boundary guarantee implicit. Concretely:
+
+| Operation | Subprocess target | Forbidden alternative |
+|---|---|---|
+| Acquire gate.lock | `python3 lib/gate-lock.py --acquire Daemon` | Direct `os.open(O_CREAT\|O_EXCL)` in daemon.py |
+| Release gate.lock | `python3 lib/gate-lock.py --release` | Direct `os.unlink()` in daemon.py |
+| Write baton `gate_state` update | `python3 lib/baton-writer.py` (stdin JSON) | Direct `open(baton.json, 'w')` in daemon.py |
+| Write failure notification | `python3 lib/notifier.py --notify` | Direct write to `last-resume-failure.txt` in daemon.py |
+
+daemon.py MAY directly read `baton.json` (read-only; no subprocess needed) and MAY directly read/write `daemon.pid` (see PID lifecycle below).
+
+### daemon.py invocation and environment variables
+
+launchd invokes daemon.py exactly as specified in `ProgramArguments`:
+
+```
+/usr/bin/env python3 ${CLAUDE_PLUGIN_ROOT}/scripts/daemon.py --watch ${CLAUDE_PROJECT_DIR}/.teamlead/
+```
+
+The `--watch <dir>` argument specifies the `.teamlead/` directory to poll. daemon.py MUST accept this argument; unrecognized arguments MUST cause a clean exit with a descriptive error (launchd will respawn via `KeepAlive: SuccessfulExit: false` semantics — see plist Key directive rationale above).
+
+**Environment variables guaranteed by the plist `EnvironmentVariables` block**:
+
+| Variable | Source | Usage in daemon.py |
+|---|---|---|
+| `CLAUDE_PLUGIN_ROOT` | plist template interpolation | Resolve `lib/` subprocess targets: `os.path.join(CLAUDE_PLUGIN_ROOT, "lib", "<name>.py")` |
+| `CLAUDE_PROJECT_DIR` | plist template interpolation | Resolve `.teamlead/` artifacts: baton, gate.lock, daemon.pid, daemon.out |
+| `TEAMLEAD_DAEMON_VERSION` | plist literal `v0.1.7` | Written to install-probe.pong.json (Layer 3 verification per §6); also logged to daemon.out at startup |
+
+daemon.py MUST NOT rely on any other environment variable for correctness. If `CLAUDE_PLUGIN_ROOT` or `CLAUDE_PROJECT_DIR` is absent at startup, daemon.py MUST log the missing variable to stderr and exit cleanly (exit code 0 per T7 normal-exit semantics — `KeepAlive: SuccessfulExit: false` prevents launchd from looping on a missing-env crash).
+
+### daemon.py internal state machine
+
+daemon.py implements the daemon actor's portion of the §1 state machine. The loop is:
+
+```text
+Startup:
+  1. Write daemon.pid (see "PID lifecycle" below)
+  2. Log TEAMLEAD_DAEMON_VERSION + startup timestamp to daemon.out
+  3. Validate CLAUDE_PLUGIN_ROOT + CLAUDE_PROJECT_DIR env vars (exit 0 if missing)
+  4. Optionally handle install-probe.json (§6 Layer 3): if .teamlead/install-probe.json
+     exists and was NOT yet ponged (no .pong.json with matching probe_id), write
+     install-probe.pong.json and continue.
+
+Poll loop (every 5 s; complemented by launchd WatchPaths wakeup):
+  5. Run T11 stale-lock reaper check inline (PID-liveness + TTL per §3)
+  6. Read .teamlead/baton.json; if absent or mtime ≤ last-seen-mtime → skip (no new baton)
+  7. If baton present and gate_state == BATON_WRITTEN:
+       a. Acquire gate.lock via subprocess lib/gate-lock.py --acquire Daemon
+          - On FileExistsError with live holder: wait up to 30 s (6 × 5 s poll cycles) then treat as T6 retry
+       b. Re-read baton.json to confirm gate_state == BATON_WRITTEN (double-check under lock)
+       c. Run §5 git stash safety net: probe working tree; stash if dirty
+       d. Validate restore_prompt allowlist (§5 T-S-2 plain-text assertion at consume time)
+          - Allowlist rejection → release gate.lock → T7 abort → notifier + exit 0
+       e. Spawn: python3 -c "import subprocess; subprocess.run(['claude', '--resume', session_id, '-p', restore_prompt])"
+          via subprocess.Popen (NOT subprocess.run, so daemon.py can release gate.lock without
+          waiting for the resumed Claude session to exit)
+       f. Update gate_state=SESSION_RESUMED in baton via subprocess lib/baton-writer.py
+       g. Release gate.lock via subprocess lib/gate-lock.py --release
+       h. Update last-seen-mtime; transition to SESSION_RESUMED monitoring window (5 min per §1 T11)
+  8. If baton gate_state == SESSION_RESUMED: run T11 daemon-side timeout check (5 min wall-clock
+     since step 7h); on timeout → T7 abort path (notifier + exit 0)
+  9. If baton gate_state ∈ {DONE, ABORTED, POST_RESUME_VERIFIED}: no daemon action needed;
+     last-seen-mtime updated; poll continues
+
+T6 retry path (from step 7a or spawn failure):
+  10. Increment retry counter in .teamlead/daemon-retries (plain integer, one line)
+  11. Back off: 1 s after retry 1, 4 s after retry 2, 16 s after retry 3
+  12. After N=3 retries → T7 abort
+
+T7 abort path (retry budget exhausted OR restore_prompt allowlist rejection OR env missing):
+  13. Write failure record via: python3 lib/notifier.py --notify
+  14. Best-effort osascript courtesy notification (§5 CEO notification channel)
+  15. os._exit(0) — clean exit so launchd does NOT respawn (KeepAlive: SuccessfulExit: false)
+```
+
+**`claude --resume` invocation contract (A-001 VALIDATED)**. The resume command constructed by daemon.py at step 7e MUST match exactly the primitive validated at Stage 1:
+
+```python
+# Construct argv — no shell interpolation; argv list prevents shell injection
+cmd = [
+    "claude",
+    "--resume", session_id,        # baton field: UUID
+    "-p", restore_prompt,          # baton field: allowlist-validated plain text
+]
+# spawn non-blocking (Popen, not run) so daemon.py continues polling
+proc = subprocess.Popen(cmd, cwd=project_dir)
+```
+
+The `-p` flag is present: daemon.py passes `restore_prompt` as the new-turn input per A-001 (`claude --resume <id> -p "<prompt>"`). Per §1 Q4 resolution, the `--resume` flag omits `--print`; the resumed session is interactive, not headless. Per §5 T-S-2, no shell interpolation occurs — the argv list is passed directly to `execve`, bypassing any shell.
+
+### daemon.py crash recovery and PID lifecycle
+
+**daemon.pid file**. daemon.py MUST write its own PID to `$CLAUDE_PROJECT_DIR/.teamlead/daemon.pid` **at startup, before the poll loop begins**. This file:
+
+- Is written as a plain ASCII decimal integer + newline (e.g., `"12345\n"`)
+- Has `0600` permissions (per §5 T-S-1 posture)
+- Is used by the §3 stale-lock reaper "Role/process mismatch" detection: `holder_role=Daemon` lock entries are cross-checked against this PID
+- Is NOT removed by daemon.py on clean exit (launchd restarts daemon.py, which overwrites it); the next launchd-spawned instance overwrites the file atomically (`os.replace`)
+
+**Crash recovery contract**. If daemon.py crashes (unhandled exception), the exit code is non-zero. Per `KeepAlive: SuccessfulExit: false` in the plist:
+
+- Non-zero exit → launchd respawns daemon.py after `ThrottleInterval` (10 s)
+- Clean exit (exit code 0, from T7) → launchd does NOT respawn
+- On respawn: daemon.py re-writes daemon.pid; stale gate.lock from the crashed instance will be reaped inline at poll-loop step 5 (T11 stale-lock reaper: dead-holder detection via `os.kill(old_pid, 0)` raises `ProcessLookupError`)
+
+**daemon-retries lifecycle**. The `.teamlead/daemon-retries` counter (step 10 in the internal state machine) tracks per-episode retry count, NOT per-daemon-process restart count. After T7 abort (exit 0), the retries file is reset to `"0\n"` via the notifier subprocess to ensure the next launchd-spawned daemon starts with a clean retry budget. (If daemon.py crashes before resetting, the next spawn reads the stale counter and continues toward N=3; this is safe and conservative.)
+
+**RunAtLoad semantics**. `RunAtLoad: true` causes launchd to spawn daemon.py immediately when the plist is bootstrapped, even if `.teamlead/baton.json` does not exist yet. daemon.py handles this gracefully: the poll loop finds no baton, no action is taken, and the process idles at 5 s poll intervals consuming negligible resources. This is intentional: the daemon must be present before PreCompact fires (per §4 "Key directive rationale" `RunAtLoad` row).
+
+### Stage 4 acceptance criteria
+
+The following 7 acceptance criteria define the observable DoD for Stage 4 close. Each maps to a verifiable command or evidence file. They extend but do not replace Stage 3 acceptance criteria (a)–(g).
+
+| ID | Criterion | Observable verification |
+|---|---|---|
+| AC-4-A | daemon.py exists at `${CLAUDE_PLUGIN_ROOT}/scripts/daemon.py` and is executable | `python3 -m py_compile scripts/daemon.py && echo OK` exits 0; file has `#!/usr/bin/env python3` shebang |
+| AC-4-B | daemon.py handles §1 T5 (`BATON_WRITTEN` → `SESSION_RESUMED`) in `--self-test` mode: given a synthetic baton with `gate_state=BATON_WRITTEN`, daemon.py spawns a subprocess call that matches the `claude --resume <id> -p <prompt>` argv contract | `python3 scripts/daemon.py --self-test` exits 0 and emits JSON `{"test": "t5_spawn_argv", "result": "pass"}` |
+| AC-4-C | daemon.py handles T6/T7 retry-then-abort in `--self-test` mode: given N=3 injected spawn failures, daemon.py writes `last-resume-failure.txt` and exits 0 (NOT non-zero) | `python3 scripts/daemon.py --self-test` emits JSON `{"test": "t6_t7_retry_abort", "result": "pass"}` |
+| AC-4-D | daemon.py subprocess pattern: `lib/gate-lock.py` + `lib/baton-writer.py` + `lib/notifier.py` are invoked via `subprocess.run`/`subprocess.Popen` (NOT imported as modules) | `grep -c "from lib\|import gate_lock\|import baton_writer\|import notifier" scripts/daemon.py` returns 0 |
+| AC-4-E | check-cross-refs.sh exits 0 after daemon.py is added (daemon.py's `lib/` references all resolve) | `bash tools/check-cross-refs.sh` exits 0 (≥ 0 additional refs from daemon.py; all resolved) |
+| AC-4-F | I-023 Metric 1 measurable: `tools/measure-latency.sh` produces a timing record with `daemon_present=true` and `precompact_to_daemon_s` field populated (even if latency exceeds 30 s target on first run) | `bash tools/measure-latency.sh --dry-run` exits 0 and emits a record with `daemon_present=true` |
+| AC-4-G | No breaking changes to existing 3 hooks + 4 libs: `check-cross-refs.sh` still exits 0 AND all 7 existing scripts pass their own `--test-mode`/`--self-test` flags unmodified | `bash tools/check-cross-refs.sh && python3 hooks/pre-compact.py --test-mode && python3 hooks/session-start.py --self-test && python3 hooks/stop.py --test-mode && python3 lib/baton-writer.py --self-test && python3 lib/gate-lock.py --self-test && python3 lib/notifier.py --self-test` — all exit 0 |
+
+### Stage 4 open questions for PLAN_AUDIT arbitration
+
+Eight questions requiring arbitration before or during Stage 4 EXECUTING. Each is flagged with a suggested disposition:
+
+**Q1 — `claude --resume` non-zero exit handling** (suggested: RESOLVE IN SPEC before EXECUTING)
+When `claude --resume` itself exits non-zero (the spawned process fails immediately, distinct from T6 "timeout / no resume detected"), should daemon.py treat this as a T6 spawn-failure (retry) or a T7 direct-abort? The baton's `session_id` may be expired or the session may be non-resumable. Proposed answer: non-zero exit from the `claude` process within 5 s of spawn → T6 retry path (same retry budget as other T6 cases); if the process runs > 5 s before failing → treat as T7 direct-abort with reason `"claude_process_exited_nonzero_after_startup"` (session started but crashed; retry is unlikely to help).
+
+**Q2 — PreCompact-hook invocation monitoring vs polling sufficiency** (suggested: RESOLVE IN SPEC)
+Does daemon.py need to monitor for a PreCompact-hook baton-write to know when to expect a new baton (event-driven), or is 5 s polling sufficient? WatchPaths in the plist already provides launchd-level wake-on-filesystem-event. Proposed answer: 5 s polling is sufficient for v0.1.7; WatchPaths complements it for the "just-written baton" fast path. No monitoring of hook invocations needed.
+
+**Q3 — daemon.pid lifecycle on RunAtLoad vs spontaneous launchd load** (suggested: RESOLVE IN SPEC)
+`RunAtLoad: true` spawns daemon.py at plist bootstrap. If the daemon exits cleanly (T7) and launchd does NOT respawn (SuccessfulExit: false), daemon.pid is left on disk with a stale PID. If the operator later runs a new Claude session that fires PreCompact, the stale daemon.pid causes the §3 stale-lock "Role/process mismatch" check to fire on the gate.lock — which is correct behavior (the daemon is dead). Proposed answer: stale daemon.pid is acceptable; the §3 reaper handles it. daemon.py overwrites daemon.pid on every startup. Document this explicitly in the "PID lifecycle" subsection above (done; this Q3 is confirmation-only).
+
+**Q4 — I-023-M1 latency target ≤ 30 s revisability** (suggested: DEFER TO STAGE 4 DATA)
+The ≤ 30 s target (I-023 Metric 1) was set at Stage 1 without a running daemon. Stage 4 will produce the first real latency data. Proposed answer: collect data in AC-4-F; report observed latency at Stage 4 close. If observed latency systematically exceeds 30 s on this host (e.g., due to WatchPaths latency > 10 s + launchd ThrottleInterval 10 s), raise CCB-Light to revise the target to ≤ 60 s with documented host observation.
+
+**Q5 — Stage 4 Wave Refinement budget margin** (suggested: RESOLVE AT PLAN_AUDIT)
+Stage 3's S2-CLOSE-ADVISOR recommended +30 kT margin; CEO deferred this margin, and Stage 3 came in at 215/235 kT (positive variance). Stage 4 baseline is 250 kT. Should Stage 4 pre-allocate a Wave Refinement reserve? Proposed answer: retain 250 kT baseline (no pre-allocation); authorize TeamLead to invoke CEO_Gate advisory if cumulative spend reaches 200 kT with major tasks outstanding.
+
+**Q6 — `--self-test` flag vs external integration test for daemon.py** (suggested: RESOLVE IN SPEC)
+Stage 3 libs and hooks all implement `--test-mode` or `--self-test`. Should daemon.py follow the same pattern (self-contained `--self-test` that exercises T5/T6/T7 without spawning a real Claude process), or should it rely entirely on external integration tests via `measure-latency.sh`? Proposed answer: daemon.py MUST implement `--self-test` (same pattern as existing scripts, per AC-4-B + AC-4-C above) for the subprocess-contract assertion. External integration via `measure-latency.sh --dry-run` covers the AC-4-F metric. Both are required.
+
+**Q7 — Pre-commit cross-ref hook generalization** (suggested: DEFER TO v0.1.8+, confirm at PLAN_AUDIT)
+Wave Refinement item from S3-CLOSE-REPORTING: generalize `check-cross-refs.sh` into a pre-commit hook that also covers `scripts/daemon.py`. Proposed answer: Stage 4 scope is daemon implementation. Generalization is a v0.1.8+ enhancement (RAID-I carry). Stage 4 will extend the existing `check-cross-refs.sh` to include `scripts/daemon.py` references (per AC-4-E) without restructuring it as a pre-commit hook.
+
+**Q8 — I-032 real-session evidence collection scheduling** (suggested: RESOLVE AT PLAN_AUDIT)
+I-032 (real-session evidence pending operator) carries from Stage 3. Stage 4 is the FINAL stage and the first stage where a running daemon makes real-session evidence collectible. Should Stage 4 EXECUTING explicitly schedule a dogfood run + `real-session-integration.md` completion as an acceptance task, or document the procedure and leave operator-driven? Proposed answer: Stage 4 EXECUTING MUST include a dogfood task (T-4-last or equivalent) that completes `docs/specs/phase-3-evidence/real-session-integration.md` Evidence section with at least one real-session run. This is the FINAL stage — deferring I-032 to v0.1.8+ is not acceptable.
+
+### Cross-script integration invariants (Stage 4 extension)
+
+These invariants extend the Stage 3 cross-invocation diagram. daemon.py must satisfy all of them without modifying any existing hook or lib script.
+
+**CI-1 — baton polling**: daemon.py polls `$CLAUDE_PROJECT_DIR/.teamlead/baton.json` mtime every 5 s. The poll interval is a daemon.py internal constant (not configurable in v0.1.7). launchd WatchPaths provides complementary wakeup on `.teamlead/` directory events.
+
+**CI-2 — gate.lock acquire/release via subprocess**: daemon.py MUST NOT call `os.open(O_CREAT|O_EXCL)` directly. All gate.lock operations go through `subprocess.run([python3, "lib/gate-lock.py", "--acquire", "Daemon"])` and `subprocess.run([python3, "lib/gate-lock.py", "--release"])`. This preserves the lib/gate-lock.py CLI boundary established in Stage 3 and keeps the I-018 actor-symmetry invariant visible at the subprocess level.
+
+**CI-3 — resume invocation**: daemon.py invokes `claude --resume <session_id> -p "<restore_prompt>"` as an argv list (no shell) per §5 T-S-2 plain-text-only assertion. The `session_id` and `restore_prompt` values are read from `baton.json` required fields. `restore_prompt` is re-validated against the §5 allowlist at consume time before being placed in argv.
+
+**CI-4 — notifier via subprocess on T7/T11 abort**: when daemon.py reaches the T7 abort exit path, it writes `last-resume-failure.txt` via `subprocess.run([python3, "lib/notifier.py", "--notify"])`. This honors the lib/notifier.py CLI boundary and ensures the notification record format is governed by notifier.py (§5 CEO notification channel contract), not duplicated in daemon.py.
+
+**CI-5 — no imports of lib scripts**: `import gate_lock`, `import baton_writer`, `import notifier`, `import handoff_builder` MUST NOT appear in daemon.py. The subprocess-only invocation pattern is the I-018 compliance boundary; module-import would silently couple daemon.py to lib internals.
+
+**CI-6 — hooks remain FROZEN**: the 3 existing hook scripts (`hooks/pre-compact.py`, `hooks/session-start.py`, `hooks/stop.py`) are Stage-3-closed artifacts. Stage 4 MUST NOT modify them. If daemon.py's integration reveals a gap in their CLI surface, the gap is RAID-I'd and the fix deferred to v0.1.8+, NOT patched in Stage 4.
+
+**CI-7 — check-cross-refs.sh coverage extension**: after daemon.py is added, `tools/check-cross-refs.sh` MUST be extended (minimal diff to the grep target list) to also grep `scripts/daemon.py` for `lib/<name>.py` references. The extension MUST NOT change the exit-code contract or output format (AC-4-E depends on the existing format).
+
+<!-- ccb: clarify 2026-05-04 — §4 extended with daemon.py contract, invocation, state machine, crash recovery, PID lifecycle, acceptance criteria, open questions, and cross-script integration invariants for Stage 4 FINAL implementation -->
+
 ### Touchpoints (preserved from skeleton)
 
 - **Depends on**: §1 state-machine `SESSION_RESUMED` transition (daemon invokes Resume command); §3 gate.lock semantics (daemon checks lock before relaunch); §6 env-portability probe-and-fall-back at install time (guard-tolerant).
