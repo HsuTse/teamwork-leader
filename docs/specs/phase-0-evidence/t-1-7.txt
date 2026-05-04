@@ -1,0 +1,237 @@
+# task: t-1-7
+# date: 2026-05-03T08:33:29+08:00
+# claude_version: 2.1.112 (Claude Code)
+# branch: feat/v0.1.7-auto-resume-daemon
+
+=== STEP 5: TIMEOUT PROBE TRIGGER (sleep 12s with timeout=5s) ===
+=== command: claude --plugin-dir /tmp/teamlead-probe-plugin --debug -p "ping" ===
+=== started: 2026-05-03T08:34:51+08:00 ===
+(eval):9: command not found: timeout
+
+=== ended: 2026-05-03T08:34:51+08:00 wall_seconds=0 ===
+
+=== /tmp/t-1-7-hook.log after timeout-probe trigger ===
+(hook log empty / not created)
+=== end hook log ===
+
+=== STEP 5: TIMEOUT PROBE TRIGGER (sleep 12s with timeout=5s) ===
+=== command: claude --plugin-dir /tmp/teamlead-probe-plugin --debug -p ping ===
+=== started: 2026-05-03T08:35:03+08:00 ===
+pong
+
+=== ended: 2026-05-03T08:35:16+08:00 wall_seconds=13 ===
+
+=== /tmp/t-1-7-hook.log after timeout-probe trigger ===
+T-1-7 timeout-probe START 2026-05-03T08:35:04+08:00 pid=30168
+=== end hook log ===
+
+=== STEP 5b: TIMEOUT PROBE re-run with --debug-file for full debug capture ===
+=== started: 2026-05-03T08:35:33+08:00 ===
+Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.
+pong2
+
+=== ended: 2026-05-03T08:35:48+08:00 wall_seconds=15 ===
+
+=== /tmp/t-1-7-hook.log after re-run ===
+T-1-7 timeout-probe START 2026-05-03T08:35:37+08:00 pid=31956
+=== /tmp/t-1-7-debug.log relevant grep (hook|timeout|kill|SessionStart|PreCompact) ===
+2026-05-03T00:35:33.848Z [DEBUG] Applying permission update: Adding 43 allow rule(s) to destination 'userSettings': ["Edit(**)","Write(**)","Bash(**)","Read(~/.claude/**)","Bash(claude plugin install:*)","Bash(fnm use:*)","Bash(node --version:*)","Bash(npx nx report:*)","mcp__chrome-devtools__take_screenshot","mcp__gemini-summarizer__summarize_file","mcp__gemini__gemini_chat","mcp__gemini__gemini_deep_research","WebFetch(domain:formulae.brew.sh)","WebFetch(domain:eu-central-1-1.aws.cloud2.influxdata.com)","WebSearch","mcp__chrome-devtools__list_pages","mcp__chrome-devtools__navigate_page","mcp__chrome-devtools__take_snapshot","mcp__chrome-devtools__fill","mcp__chrome-devtools__click","mcp__chrome-devtools__wait_for","mcp__chrome-devtools__evaluate_script","WebFetch(domain:tiponet.tipo.gov.tw)","WebFetch(domain:ops.epo.org)","WebFetch(domain:patents.google.com)","WebFetch(domain:patentimages.storage.googleapis.com)","mcp__context7__resolve-library-id","mcp__context7__query-docs","WebFetch(domain:github.com)","WebFetch(domain:claude.com)","mcp__chrome-devtools__resize_page","WebFetch(domain:raw.githubusercontent.com)","WebFetch(domain:api.anthropic.com)","WebFetch(domain:http-intake.logs.us5.datadoghq.com)","WebFetch(domain:mcp-proxy.anthropic.com)","WebFetch(domain:downloads.claude.ai)","WebFetch(domain:docs.claude.com)","mcp__plugin_github_github__get_file_contents","mcp__plugin_github_github__search_code","Skill(claude-api)","WebFetch(domain:storybook.mezzanine-ui.org)","WebFetch(domain:mezzanine.rytass.com)","WebFetch(domain:docs.oracle.com)"]
+2026-05-03T00:35:33.849Z [DEBUG] Applying permission update: Adding 30 ask rule(s) to destination 'userSettings': ["Bash(git commit:*)","Bash(git push:*)","Bash(git merge:*)","Bash(git rebase:*)","Bash(git reset:*)","Bash(git tag:*)","Bash(git clean:*)","Bash(gh release:*)","Bash(gh pr merge:*)","WebFetch(domain:*)","Edit(~/.claude/hooks/**)","Write(~/.claude/hooks/**)","Edit(~/.claude/commands/**)","Write(~/.claude/commands/**)","Edit(~/.claude/agents/**)","Write(~/.claude/agents/**)","Edit(~/.claude/rules/**)","Write(~/.claude/rules/**)","Edit(~/.claude/skills/**)","Write(~/.claude/skills/**)","Edit(~/.claude/agent-memory/**)","Write(~/.claude/agent-memory/**)","Edit(~/.claude/projects/**/memory/**)","Write(~/.claude/projects/**/memory/**)","Edit(~/.claude/settings.json)","Write(~/.claude/settings.json)","Edit(~/.claude/settings.local.json)","Write(~/.claude/settings.local.json)","Edit(~/.claude/CLAUDE.md)","Write(~/.claude/CLAUDE.md)"]
+2026-05-03T00:35:33.916Z [DEBUG] Loaded hooks from standard location for plugin teamlead-probe: /tmp/teamlead-probe-plugin/hooks/hooks.json
+2026-05-03T00:35:33.933Z [DEBUG] Processing 4 skill paths for plugin document-skills
+2026-05-03T00:35:33.934Z [DEBUG] Checking skill path: ./skills/xlsx -> /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/xlsx (exists: true)
+2026-05-03T00:35:33.934Z [DEBUG] Checking skill path: ./skills/docx -> /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/docx (exists: true)
+2026-05-03T00:35:33.934Z [DEBUG] Checking skill path: ./skills/pptx -> /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/pptx (exists: true)
+2026-05-03T00:35:33.934Z [DEBUG] Checking skill path: ./skills/pdf -> /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/pdf (exists: true)
+2026-05-03T00:35:33.934Z [DEBUG] Found 4 valid skill paths for plugin document-skills, setting skillsPaths
+2026-05-03T00:35:33.935Z [DEBUG] Loaded hooks from standard location for plugin superpowers: /Users/HsuTse/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/hooks/hooks.json
+2026-05-03T00:35:33.935Z [DEBUG] Loaded hooks from standard location for plugin explanatory-output-style: /Users/HsuTse/.claude/plugins/cache/claude-plugins-official/explanatory-output-style/1.0.0/hooks/hooks.json
+2026-05-03T00:35:33.935Z [DEBUG] Loaded hooks from standard location for plugin security-guidance: /Users/HsuTse/.claude/plugins/cache/claude-plugins-official/security-guidance/unknown/hooks/hooks.json
+2026-05-03T00:35:33.935Z [DEBUG] Loaded hooks from standard location for plugin google-workspace-cli: /Users/HsuTse/.claude/plugins/cache/rytass-claude-code/google-workspace-cli/0.1.0/hooks/hooks.json
+2026-05-03T00:35:33.936Z [DEBUG] Loaded hooks from standard location for plugin protoforge: /Users/HsuTse/.claude/plugins/cache/rytass-claude-code/protoforge/0.3.2/hooks/hooks.json
+2026-05-03T00:35:33.936Z [DEBUG] Loaded hooks from standard location for plugin project-rule: /Users/HsuTse/.claude/plugins/cache/rytass-claude-code/project-rule/0.8.0/hooks/hooks.json
+2026-05-03T00:35:36.886Z [DEBUG] Loading skills from: managed=/Library/Application Support/ClaudeCode/.claude/skills, user=/Users/HsuTse/.claude/skills, project=[]
+2026-05-03T00:35:36.892Z [DEBUG] getPluginSkills: Processing 19 enabled plugins
+2026-05-03T00:35:36.892Z [DEBUG] Checking plugin teamlead-probe: skillsPath=none, skillsPaths=0 paths
+2026-05-03T00:35:36.892Z [DEBUG] Checking plugin cowork-plugin-management: skillsPath=exists, skillsPaths=0 paths
+2026-05-03T00:35:36.892Z [DEBUG] Attempting to load skills from plugin cowork-plugin-management default skillsPath: /Users/HsuTse/.claude/plugins/cache/knowledge-work-plugins/cowork-plugin-management/0.1.0/skills
+2026-05-03T00:35:36.892Z [DEBUG] Checking plugin github: skillsPath=none, skillsPaths=0 paths
+2026-05-03T00:35:36.892Z [DEBUG] Checking plugin explanatory-output-style: skillsPath=none, skillsPaths=0 paths
+2026-05-03T00:35:36.892Z [DEBUG] Checking plugin document-skills: skillsPath=exists, skillsPaths=4 paths
+2026-05-03T00:35:36.893Z [DEBUG] Attempting to load skills from plugin document-skills default skillsPath: /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills
+2026-05-03T00:35:36.893Z [DEBUG] Checking plugin code-review: skillsPath=none, skillsPaths=0 paths
+2026-05-03T00:35:36.893Z [DEBUG] Checking plugin superpowers: skillsPath=exists, skillsPaths=0 paths
+2026-05-03T00:35:36.893Z [DEBUG] Attempting to load skills from plugin superpowers default skillsPath: /Users/HsuTse/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills
+2026-05-03T00:35:36.893Z [DEBUG] Checking plugin feature-dev: skillsPath=none, skillsPaths=0 paths
+2026-05-03T00:35:36.893Z [DEBUG] Checking plugin security-guidance: skillsPath=none, skillsPaths=0 paths
+2026-05-03T00:35:36.893Z [DEBUG] Checking plugin plugin-dev: skillsPath=exists, skillsPaths=0 paths
+2026-05-03T00:35:36.893Z [DEBUG] Attempting to load skills from plugin plugin-dev default skillsPath: /Users/HsuTse/.claude/plugins/cache/claude-plugins-official/plugin-dev/unknown/skills
+2026-05-03T00:35:36.893Z [DEBUG] Checking plugin boilerplate: skillsPath=exists, skillsPaths=0 paths
+2026-05-03T00:35:36.893Z [DEBUG] Attempting to load skills from plugin boilerplate default skillsPath: /Users/HsuTse/.claude/plugins/cache/rytass-claude-code/boilerplate/0.1.0/skills
+2026-05-03T00:35:36.893Z [DEBUG] Checking plugin google-workspace-cli: skillsPath=exists, skillsPaths=0 paths
+2026-05-03T00:35:36.893Z [DEBUG] Attempting to load skills from plugin google-workspace-cli default skillsPath: /Users/HsuTse/.claude/plugins/cache/rytass-claude-code/google-workspace-cli/0.1.0/skills
+2026-05-03T00:35:36.893Z [DEBUG] Checking plugin project-rule: skillsPath=exists, skillsPaths=0 paths
+2026-05-03T00:35:36.893Z [DEBUG] Attempting to load skills from plugin project-rule default skillsPath: /Users/HsuTse/.claude/plugins/cache/rytass-claude-code/project-rule/0.8.0/skills
+2026-05-03T00:35:36.893Z [DEBUG] Checking plugin react-performance: skillsPath=exists, skillsPaths=0 paths
+2026-05-03T00:35:36.893Z [DEBUG] Attempting to load skills from plugin react-performance default skillsPath: /Users/HsuTse/.claude/plugins/cache/rytass-claude-code/react-performance/0.1.0/skills
+2026-05-03T00:35:36.893Z [DEBUG] Checking plugin mezzanine-ui: skillsPath=exists, skillsPaths=0 paths
+2026-05-03T00:35:36.893Z [DEBUG] Attempting to load skills from plugin mezzanine-ui default skillsPath: /Users/HsuTse/.claude/plugins/cache/rytass-claude-code/mezzanine-ui/0.4.2/skills
+2026-05-03T00:35:36.893Z [DEBUG] Checking plugin protoforge: skillsPath=exists, skillsPaths=0 paths
+2026-05-03T00:35:36.894Z [DEBUG] Attempting to load skills from plugin protoforge default skillsPath: /Users/HsuTse/.claude/plugins/cache/rytass-claude-code/protoforge/0.3.2/skills
+2026-05-03T00:35:36.894Z [DEBUG] Checking plugin context7: skillsPath=none, skillsPaths=0 paths
+2026-05-03T00:35:36.894Z [DEBUG] Checking plugin playwright: skillsPath=none, skillsPaths=0 paths
+2026-05-03T00:35:36.894Z [DEBUG] Checking plugin teamwork-leader: skillsPath=exists, skillsPaths=0 paths
+2026-05-03T00:35:36.894Z [DEBUG] Attempting to load skills from plugin teamwork-leader default skillsPath: /Users/HsuTse/.claude/plugins/cache/teamwork-leader/teamwork-leader/0.1.5/skills
+2026-05-03T00:35:36.897Z [DEBUG] Loading hooks from plugin: teamlead-probe
+2026-05-03T00:35:36.897Z [DEBUG] Loading hooks from plugin: explanatory-output-style
+2026-05-03T00:35:36.897Z [DEBUG] Loading hooks from plugin: superpowers
+2026-05-03T00:35:36.897Z [DEBUG] Loading hooks from plugin: security-guidance
+2026-05-03T00:35:36.897Z [DEBUG] Loading hooks from plugin: google-workspace-cli
+2026-05-03T00:35:36.897Z [DEBUG] Loading hooks from plugin: project-rule
+2026-05-03T00:35:36.897Z [DEBUG] Loading hooks from plugin: protoforge
+2026-05-03T00:35:36.897Z [DEBUG] Registered 30 hooks from 19 plugins
+2026-05-03T00:35:36.933Z [DEBUG] Loaded 1 skills from plugin cowork-plugin-management default directory
+2026-05-03T00:35:36.934Z [DEBUG] Loaded 1 skills from plugin boilerplate default directory
+2026-05-03T00:35:36.934Z [DEBUG] Loaded 1 skills from plugin google-workspace-cli default directory
+2026-05-03T00:35:36.935Z [DEBUG] Loaded 7 skills from plugin plugin-dev default directory
+2026-05-03T00:35:36.937Z [DEBUG] Loaded 14 skills from plugin superpowers default directory
+2026-05-03T00:35:36.939Z [DEBUG] Loaded 15 skills from plugin project-rule default directory
+2026-05-03T00:35:36.939Z [DEBUG] Loaded 2 skills from plugin mezzanine-ui default directory
+2026-05-03T00:35:36.942Z [DEBUG] Loaded 3 skills from plugin protoforge default directory
+2026-05-03T00:35:36.942Z [DEBUG] Loaded 1 skills from plugin teamwork-leader default directory
+2026-05-03T00:35:36.943Z [DEBUG] Loaded 17 skills from plugin document-skills default directory
+2026-05-03T00:35:36.943Z [DEBUG] Attempting to load skills from plugin document-skills skillsPaths: /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/xlsx, /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/docx, /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/pptx, /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/pdf
+2026-05-03T00:35:36.943Z [DEBUG] Loading from skillPath: /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/xlsx for plugin document-skills
+2026-05-03T00:35:36.943Z [DEBUG] Loading from skillPath: /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/docx for plugin document-skills
+2026-05-03T00:35:36.943Z [DEBUG] Loading from skillPath: /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/pptx for plugin document-skills
+2026-05-03T00:35:36.943Z [DEBUG] Loading from skillPath: /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/pdf for plugin document-skills
+2026-05-03T00:35:36.943Z [DEBUG] Loaded 1 skills from plugin react-performance default directory
+2026-05-03T00:35:36.950Z [DEBUG] Loaded 23 unique skills (23 unconditional, 0 conditional, managed: 0, user: 15, project: 0, additional: 0, legacy commands: 8)
+2026-05-03T00:35:36.951Z [DEBUG] Loaded 0 skills from plugin document-skills custom path: /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/xlsx
+2026-05-03T00:35:36.951Z [DEBUG] Loaded 0 skills from plugin document-skills custom path: /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/docx
+2026-05-03T00:35:36.951Z [DEBUG] Loaded 0 skills from plugin document-skills custom path: /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/pptx
+2026-05-03T00:35:36.951Z [DEBUG] Loaded 0 skills from plugin document-skills custom path: /Users/HsuTse/.claude/plugins/cache/anthropic-agent-skills/document-skills/98669c11ca63/skills/pdf
+2026-05-03T00:35:36.951Z [DEBUG] Total plugin skills loaded: 63
+2026-05-03T00:35:36.951Z [DEBUG] getSkills returning: 23 skill dir commands, 63 plugin skills, 10 bundled skills, 0 builtin plugin skills
+2026-05-03T00:35:37.009Z [DEBUG] MCP server "plugin:context7:context7": Starting connection with timeout of 30000ms
+2026-05-03T00:35:37.016Z [DEBUG] MCP server "plugin:playwright:playwright": Starting connection with timeout of 30000ms
+=== debug log line count:     1283 ===
+
+=== STEP 7: PAYLOAD SIZE SWEEP (10, 100, 1024, 4096 KB) ===
+
+--- run: PROBE_SIZE_KB=10 requested_bytes=10240 wall=13s exit=0 ---
+stdout preview: pong-10
+hook log: T-1-7 payload-probe pid=33201 ts=2026-05-03T08:36:35+08:00 requested_kb=10 actual_bytes=10240
+actual: actual_bytes=10240
+hook debug lines mentioning teamlead-probe: 4
+hook success lines: 4
+additionalContext lines:
+2026-05-03T00:36:35.525Z [DEBUG] Hook SessionStart (bash "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/session-start.sh") provided additionalContext (1018 chars)
+2026-05-03T00:36:35.929Z [DEBUG] Hook SessionStart ("${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd" session-start) provided additionalContext (5632 chars)
+truncation hints (if any): 2026-05-03T00:36:40.314Z [DEBUG] MCP server "claude.ai Figma": Server instructions truncated from 2996 to 2048 chars
+
+--- run: PROBE_SIZE_KB=100 requested_bytes=102400 wall=16s exit=0 ---
+stdout preview: pong-100
+hook log: T-1-7 payload-probe pid=33567 ts=2026-05-03T08:36:48+08:00 requested_kb=100 actual_bytes=102400
+actual: actual_bytes=102400
+hook debug lines mentioning teamlead-probe: 4
+hook success lines: 4
+additionalContext lines:
+2026-05-03T00:36:48.503Z [DEBUG] Hook SessionStart (bash "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/session-start.sh") provided additionalContext (1018 chars)
+2026-05-03T00:36:48.963Z [DEBUG] Hook SessionStart ("${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd" session-start) provided additionalContext (5632 chars)
+truncation hints (if any): 2026-05-03T00:36:53.657Z [DEBUG] MCP server "claude.ai Figma": Server instructions truncated from 2996 to 2048 chars
+
+--- run: PROBE_SIZE_KB=1024 requested_bytes=1048576 wall=15s exit=0 ---
+stdout preview: pong-1024
+hook log: T-1-7 payload-probe pid=33948 ts=2026-05-03T08:37:04+08:00 requested_kb=1024 actual_bytes=1048576
+actual: actual_bytes=1048576
+hook debug lines mentioning teamlead-probe: 4
+hook success lines: 4
+additionalContext lines:
+2026-05-03T00:37:04.176Z [DEBUG] Hook SessionStart (bash "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/session-start.sh") provided additionalContext (1018 chars)
+2026-05-03T00:37:04.636Z [DEBUG] Hook SessionStart ("${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd" session-start) provided additionalContext (5632 chars)
+truncation hints (if any): 2026-05-03T00:37:08.959Z [DEBUG] MCP server "claude.ai Figma": Server instructions truncated from 2996 to 2048 chars
+
+--- run: PROBE_SIZE_KB=4096 requested_bytes=4194304 wall=15s exit=0 ---
+stdout preview: pong-4096
+hook log: T-1-7 payload-probe pid=34334 ts=2026-05-03T08:37:27+08:00 requested_kb=4096 actual_bytes=4194304
+actual: actual_bytes=4194304
+hook debug lines mentioning teamlead-probe: 4
+hook success lines: 4
+additionalContext lines:
+2026-05-03T00:37:19.188Z [DEBUG] Hook SessionStart (bash "${CLAUDE_PLUGIN_ROOT}/hooks-handlers/session-start.sh") provided additionalContext (1018 chars)
+2026-05-03T00:37:19.629Z [DEBUG] Hook SessionStart ("${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd" session-start) provided additionalContext (5632 chars)
+truncation hints (if any): 2026-05-03T00:37:23.689Z [DEBUG] MCP server "claude.ai Figma": Server instructions truncated from 2996 to 2048 chars
+
+=== STEP 7b: PAYLOAD UPPER-BOUND PROBE (8192, 16384 KB) ===
+
+--- run: PROBE_SIZE_KB=8192 wall=35s exit=0 ---
+stdout: pong-8192
+stderr: 
+hook log: 
+parsed-mention count for size=8192KB: 0
+truncation hints:     "additionalContext": "You are in 'explanatory' output style mode, where you should provide educational insights about the codebase as you help with the user's task.
+
+You should be clear and educational, providing helpful explanations while remaining focused on the task. Balance educational content with task completion. When providing insights, you may exceed typical length constraints, but remain focused and relevant.
+
+## Insights
+In order to encourage learning, before and after writing code, always provide brief educational explanations about implementation choices using (with backticks):
+\"`★ Insight ─────────────────────────────────────`
+[2-3 key educational points]
+`─────────────────────────────────────────────────`\"
+
+These insights should be included in the conversation, not in the codebase. You should generally focus on interesting insights that are specific to the codebase or the code you just wrote, rather than general programming concepts. Do not wait until the end to provide insights. Provide them as you write code."
+2026-05-03T00:38:27.720Z [DEBUG] MCP server "claude.ai Figma": Server instructions truncated from 2996 to 2048 chars
+error hints: - **CLAUDE.md cross-ref**: [HsuTse] 手動套（hook 擋）→ §Key Conventions L61 加 Red error tokens bullet（含 hex + ratio 數字）
+- **PR #20 merged** (`d3a7321`): `eslint-plugin-react-hooks@^7.1.1` + flat-config integration; `rules-of-hooks: error`, `exhaustive-deps: warn` scoped `apps/client/**`; rollout doc with 26-file day-0 baseline
+> 接續 BeiliSystem v1.3.1 NS scoping retrofit。當前 main HEAD 不變（v1.3 Wave 1 unstaged：5 modified + 1 new HTML）。下一步：依 `docs/plans/v1.3.1-retrofit-plan.md`（556 行、17 steps、兩輪 Opus audit 已 APPROVED_WITH_REVISIONS 套完）執行純 docs retrofit。執行序：(1) Step 1 產 CLAUDE.md schemaVersion 14→17 snippet（hook-blocked，產 `docs/plans/v1.3.1-claude-md-snippet.md` 等 [HsuTse] 手動套用）；(2) Step 2 cp v1.3→v1.3.1 HTML + 升版號；(3) Step 3-8 動 v1.3.1 HTML 各 section（Section 4 outbox/雙來源 / Section 5 cancel error handling / 業務規則表 6 row / Section 6 雙卡片補述 / Section 7 Q15 + D''' fallback / Section 8 P1-P9 retrofit log）；(4) Step 9-13 動 sales-spec.md（§1.5 整節重寫雙來源異質 / §1.9-1.14 6 段新增 含 NS PATCH ordering + outbox precondition + IQC dual-source + expiry invariant / §2.6 修正 cascade 表 / §2.7 schemaVersion 三向對齊紀要 / Document Versioning v3.1）；(5) Step 14 backend-api-gaps Gap #10 item_allocated + 3 條 v1.3.1 mutation；(6) Step 15 architecture/checklist 日期 bump；(7) Step 16 顧問會議 agenda 整合到 Section 8 + architecture-notes；(8) Step 17 grep invariants 最終 gate（包含 14→17 ≥3、14→18 = 0、outbox/patch_pending/雙來源異質/Q15-Q34 markers、CLAUDE.md schemaVersion:14 期望 0 等多項 grep）。如 Step 17 任一 grep 不過，回頭修對應 step。完成後 task close + 提交 [HsuTse] review，然後 [HsuTse] 自行決定 commit + 是否進 Wave 2 schema bump。Plan §6 dependency graph 顯示 Step 1/2/9/14/15/16 可並行；Step 12 必須等 Step 1 完成（§2.7 ref Step 1 snippet 路徑）。Apply `~/.claude/rules/auto-review-cadence.md`：本 plan 已過兩輪 Opus audit 套完，可直接進實作；implementing 過程若發現 plan 與 v1.3 baseline 衝突，停手 + 回頭澄清不要硬改。Apply `~/.claude/rules/CONTRIBUTING.md` surgical change 紀律。`.playwright-mcp/` gitignored 不要動。
+
+--- run: PROBE_SIZE_KB=16384 wall=33s exit=0 ---
+stdout: pong-16384
+stderr: 
+hook log: 
+parsed-mention count for size=16384KB: 0
+truncation hints:     "additionalContext": "You are in 'explanatory' output style mode, where you should provide educational insights about the codebase as you help with the user's task.
+
+You should be clear and educational, providing helpful explanations while remaining focused on the task. Balance educational content with task completion. When providing insights, you may exceed typical length constraints, but remain focused and relevant.
+
+## Insights
+In order to encourage learning, before and after writing code, always provide brief educational explanations about implementation choices using (with backticks):
+\"`★ Insight ─────────────────────────────────────`
+[2-3 key educational points]
+`─────────────────────────────────────────────────`\"
+
+These insights should be included in the conversation, not in the codebase. You should generally focus on interesting insights that are specific to the codebase or the code you just wrote, rather than general programming concepts. Do not wait until the end to provide insights. Provide them as you write code."
+2026-05-03T00:39:02.128Z [DEBUG] MCP server "claude.ai Figma": Server instructions truncated from 2996 to 2048 chars
+error hints: - **CLAUDE.md cross-ref**: [HsuTse] 手動套（hook 擋）→ §Key Conventions L61 加 Red error tokens bullet（含 hex + ratio 數字）
+- **PR #20 merged** (`d3a7321`): `eslint-plugin-react-hooks@^7.1.1` + flat-config integration; `rules-of-hooks: error`, `exhaustive-deps: warn` scoped `apps/client/**`; rollout doc with 26-file day-0 baseline
+> 接續 BeiliSystem v1.3.1 NS scoping retrofit。當前 main HEAD 不變（v1.3 Wave 1 unstaged：5 modified + 1 new HTML）。下一步：依 `docs/plans/v1.3.1-retrofit-plan.md`（556 行、17 steps、兩輪 Opus audit 已 APPROVED_WITH_REVISIONS 套完）執行純 docs retrofit。執行序：(1) Step 1 產 CLAUDE.md schemaVersion 14→17 snippet（hook-blocked，產 `docs/plans/v1.3.1-claude-md-snippet.md` 等 [HsuTse] 手動套用）；(2) Step 2 cp v1.3→v1.3.1 HTML + 升版號；(3) Step 3-8 動 v1.3.1 HTML 各 section（Section 4 outbox/雙來源 / Section 5 cancel error handling / 業務規則表 6 row / Section 6 雙卡片補述 / Section 7 Q15 + D''' fallback / Section 8 P1-P9 retrofit log）；(4) Step 9-13 動 sales-spec.md（§1.5 整節重寫雙來源異質 / §1.9-1.14 6 段新增 含 NS PATCH ordering + outbox precondition + IQC dual-source + expiry invariant / §2.6 修正 cascade 表 / §2.7 schemaVersion 三向對齊紀要 / Document Versioning v3.1）；(5) Step 14 backend-api-gaps Gap #10 item_allocated + 3 條 v1.3.1 mutation；(6) Step 15 architecture/checklist 日期 bump；(7) Step 16 顧問會議 agenda 整合到 Section 8 + architecture-notes；(8) Step 17 grep invariants 最終 gate（包含 14→17 ≥3、14→18 = 0、outbox/patch_pending/雙來源異質/Q15-Q34 markers、CLAUDE.md schemaVersion:14 期望 0 等多項 grep）。如 Step 17 任一 grep 不過，回頭修對應 step。完成後 task close + 提交 [HsuTse] review，然後 [HsuTse] 自行決定 commit + 是否進 Wave 2 schema bump。Plan §6 dependency graph 顯示 Step 1/2/9/14/15/16 可並行；Step 12 必須等 Step 1 完成（§2.7 ref Step 1 snippet 路徑）。Apply `~/.claude/rules/auto-review-cadence.md`：本 plan 已過兩輪 Opus audit 套完，可直接進實作；implementing 過程若發現 plan 與 v1.3 baseline 衝突，停手 + 回頭澄清不要硬改。Apply `~/.claude/rules/CONTRIBUTING.md` surgical change 紀律。`.playwright-mcp/` gitignored 不要動。
+
+=== STEP 7c: PAYLOAD UPPER-BOUND with FAST generator (8192, 16384 KB; ALSO re-run 4096 for cross-check) ===
+
+--- run: PROBE_SIZE_KB=4096 wall=15s exit=0 debug_bytes= 12770492 ---
+stdout: pong
+hook log: T-1-7 payload-probe-fast pid=42789 ts=2026-05-03T08:41:14+08:00 requested_kb=4096 actual_bytes=4194304
+parsed-mention count for size=4096KB: 3
+Hooks-Checking entries with size= prefix: 3
+
+--- run: PROBE_SIZE_KB=8192 wall=15s exit=0 debug_bytes= 25353405 ---
+stdout: pong
+hook log: T-1-7 payload-probe-fast pid=43377 ts=2026-05-03T08:41:30+08:00 requested_kb=8192 actual_bytes=8388608
+parsed-mention count for size=8192KB: 3
+Hooks-Checking entries with size= prefix: 3
+
+--- run: PROBE_SIZE_KB=16384 wall=17s exit=0 debug_bytes= 50523333 ---
+stdout: pong
+hook log: T-1-7 payload-probe-fast pid=43746 ts=2026-05-03T08:41:46+08:00 requested_kb=16384 actual_bytes=16777216
+parsed-mention count for size=16384KB: 3
+Hooks-Checking entries with size= prefix: 3
+
+=== STEP 8: SUMMARY ===
+Defaults documented (snapshot t-1-7-hook-docs-snapshot.md): command 60s, prompt 30s.
+Probe used SessionStart matcher with timeout=5 (not the 60s default) to force timeout.
+Result: timeout-probe sleep=12s never reached END line in /tmp/t-1-7-hook.log → kill confirmed.
+Result: payload-probe at 10/100/1024/4096/8192/16384 KB all returned exit=0 with full payload
+        observable in claude debug log under 'Hooks: Checking first line for async: ...'
+        max tested payload = 16777216 bytes; no truncation observed up to that bound.
+Verdict: confirmed (with limits documented)

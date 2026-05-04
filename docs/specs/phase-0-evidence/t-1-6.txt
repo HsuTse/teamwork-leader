@@ -1,0 +1,184 @@
+# task: t-1-6
+# date: 2026-05-03T12:50:28+08:00
+# claude_version: 2.1.112 (Claude Code)
+# branch: feat/v0.1.7-auto-resume-daemon
+
+## Step 1 (TeamLead-executed — trivial cli snapshot)
+2.1.112 (Claude Code)
+
+## Marketplaces
+anthropic-agent-skills
+claude-plugins-official
+ClaudeCodeMarketplace-main
+knowledge-work-plugins
+rytass-claude-code
+teamwork-leader
+
+## Step 2-3 (PO-PM scope; appended below)
+
+## Source survey
+
+### Source 1: Official changelog / docs (WebFetch blocked — fallback via WebSearch)
+
+Note: WebFetch to docs.anthropic.com was blocked in strict mode by the pretooluse_guard hook.
+Findings obtained via WebSearch targeting changelog content indexed publicly.
+
+- https://claudefa.st/blog/guide/changelog — "Claude Code Changelog: All Release Notes (2026)"
+  — Community-aggregated changelog. Key resume/compact entries found:
+  - v2.1.75: Auto-Compact enabled; 1M context windows for Opus 4.6 default on Max/Team/Enterprise
+    (reduces AutoCompact frequency on longer sessions).
+  - Autocompact thrash detection added: stops 3 consecutive immediate-refill compactions with
+    actionable error instead of burning API calls.
+  - AutoCompact buffer reduced from 45K to 33K tokens (more usable space before compaction).
+  - /resume command now offers to summarize stale large sessions before re-reading them (matches
+    --resume behavior).
+  - No entry found for: "native cross-session resume post-compact", "PreCompact hook", or
+    "cross-session context restoration" as a shipped or announced feature.
+
+- https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md — Official CHANGELOG.md
+  (WebFetch blocked; referenced via search snippets).
+  — Indexed content shows bugfix entries for compact/resume but NO feature shipping entry for
+    native cross-session resume daemon or plugin-hook-based resume orchestration.
+
+- https://code.claude.com/docs/en/whats-new/2026-w15 — "Week 15 · April 6-10, 2026"
+  — Referenced in search results. No resume/compact announcement found in week summary.
+
+### Source 2: GitHub issues (WebFetch to github.com blocked — fallback via WebSearch)
+
+Top-5 most relevant issues (from WebSearch results):
+
+1. Issue #52556 — "claude should resume the last session by default; add --new for fresh sessions"
+   URL: https://github.com/anthropics/claude-code/issues/52556
+   Status: open (feature request) | Date: 2026 (high issue number, post-v2.1)
+   Summary: User requests that `claude` with no flags resume the most recent session for cwd;
+   current design treats continuity as exceptional (requires explicit --resume flag).
+   Relevance: confirms no native auto-resume default shipped yet.
+
+2. Issue #44063 — "[FEATURE] Resume Any Claude Session in the CLI"
+   URL: https://github.com/anthropics/claude-code/issues/44063
+   Status: open (feature request) | Date: 2026
+   Summary: Proposes storing CLI sessions server-side and allowing resume by ID from any client
+   (CLI, mobile, web, another machine) with prior transcript as read-only context.
+   Relevance: cross-client session resume is still a FEATURE REQUEST — not shipped or roadmapped
+   with ETA. No Anthropic team response with commitment found.
+
+3. Issue #55241 — "[BUG] claude --resume hang on multi-turn session (2.1.126, macOS arm64)"
+   URL: https://github.com/anthropics/claude-code/issues/55241
+   Status: open (bug) | Date: 2026 (v2.1.126 — very recent)
+   Summary: `claude --resume <session-id>` spawns process, consumes CPU, but never returns to
+   interactive prompt within multi-minute waits.
+   Relevance: existing --resume is buggy on recent versions; not a positive signal for imminent
+   native daemon-level resume orchestration.
+
+4. Issue #46751 — "[Feature Request] Remove or make optional resume summary/compaction prompt
+   on session resume"
+   URL: https://github.com/anthropics/claude-code/issues/46751
+   Status: open (feature request) | Date: 2026
+   Summary: Requests ability to skip/suppress the compaction summary prompt that fires on
+   `claude --resume`.
+   Relevance: the post-compact summary behavior on resume is not yet configurable — confirms
+   resume UX is still evolving; no ETA on improvements.
+
+5. Issue #21190 — "Feature request: pre-compact hook or include last N interactions in compact
+   summary"
+   URL: https://github.com/anthropics/claude-code/issues/21190
+   Status: open (feature request) | Date: 2026 (earlier issue number)
+   Summary: Requests either a pre-compact hook to inject content into the compact summary, or
+   inclusion of last N interaction turns verbatim.
+   Relevance: DIRECTLY relevant — this is the plugin hook capability this charter builds on.
+   The issue is open with no Anthropic commitment found; hook capability shipped as part of
+   the Claude Code plugin system (PreCompact hook exists), but native "pre-compact inject" as
+   a first-class configurable feature is still community-requested.
+
+Bonus: Issue #41945 — "Session history not accessible across workspaces or clients (VS Code /
+   Web / Mobile)"
+   URL: https://github.com/anthropics/claude-code/issues/41945
+   Status: open (feature request)
+   Summary: Sessions created in CLI cannot be resumed in VS Code extension or web/mobile — cross-
+   client session portability is absent.
+   Relevance: confirms cross-session continuity gap is real and multi-dimensional.
+
+### Source 3-5: WebSearch results
+
+Query 1: "claude code session resume cross-session continuity 2026"
+- https://nimbalyst.com/blog/best-session-managers-for-claude-code-and-codex/ (2026)
+  "Best Claude Code & Codex Session Managers (2026)" — community tools exist BECAUSE native
+  cross-session orchestration is absent; confirms gap.
+- https://claudefa.st/blog/guide/mechanics/session-memory (2026)
+  "Claude Code Session Memory: Automatic Cross-Session Context" — Session Memory (auto-memory
+  via /recall, visible ~v2.1.30+) is the current Anthropic mechanism for cross-session context.
+  It provides high-level memory summarization, NOT full context restoration post-compact.
+  Session Memory visible messages ("Recalled/Wrote memories") became prominent ~Feb 2026.
+- https://pasqualepillitteri.it/en/news/366/claude-code-continue-resume-guide (2026)
+  "Claude Code --continue and --resume: Never Lose Your Context Again" — tutorial confirming
+  --continue/-c and --resume/-r are the shipped session tools; no daemon-level orchestration.
+
+Query 2: '"claude code" autocompact official roadmap 2026'
+- https://www.cometapi.com/what-is-auto-compact-in-claude-code/ (2026)
+  "What Is Auto Compact in Claude Code" — explains AutoCompact as currently shipped behavior;
+  no mention of Anthropic roadmap for hook-based or daemon-assisted compact recovery.
+- https://www.turboai.dev/blog/claude-code-env-vars-v2-1-75 (2026)
+  "Claude Code v2.1.75: Auto-Compact & Plugins" — confirms plugin hooks (PreCompact etc.) were
+  shipped in v2.1.75 era. This is the hook capability this charter leverages.
+- https://aimaker.substack.com/p/anthropic-claude-updates-q1-2026-guide (2026)
+  "Complete Guide to Every Claude Update in Q1 2026" — Q1 2026 shipped: Remote Control,
+  Dispatch, Channels, Computer Use improvements, Auto Mode, AutoDream. No native cross-session
+  resume daemon or post-compact context recovery listed.
+
+Query 3: "Anthropic Claude Code cross-session continuity announcement native feature"
+- https://github.com/anthropics/claude-code/issues/18417 (2026)
+  "Feature Request: Native session persistence and context continuity" — OPEN feature request,
+  no Anthropic commitment found.
+- https://www.macrumors.com/2026/04/15/anthropic-rebuilds-claude-code-desktop-app/ (April 2026)
+  "Anthropic Rebuilds Claude Code Desktop App Around Parallel Sessions" — desktop app redesign
+  adds sidebar for managing multiple sessions/filtering by status, project, environment. This
+  is UI-level session management, NOT context-restoration post-compact.
+- Community source (Nimbalyst, 2026): explicitly states "infrastructure for maintaining
+  continuity across sessions remains a DIY exercise that most users discover only after
+  experiencing painful context loss."
+
+Query 4: GitHub issues — additional compact/resume findings
+- Issue #14941: "Post-compaction behavior aggressively resumes implementation without assessing
+  conversational context" — open, post-compact UX issue; no ETA on fix.
+- Issue #48893: "[BUG] Auto-compact fails when 200K standard context is exhausted — compaction
+  API requires extended context" — open bug, April 2026.
+- Issue #50732: "[BUG] /context shows 76% header but Messages 138.7% — Context limit reached
+  on resume within free space" — open bug, April 2026. Confirms resume+compact interaction
+  is still actively buggy.
+
+## Decision matrix application
+
+### Matrix row applied
+
+| Finding observed | Applicable row |
+|---|---|
+| Anthropic ships native cross-session resume with ETA <3 months | NOT APPLICABLE |
+| Anthropic publicly committed with ETA 3-6 months | NOT APPLICABLE |
+| Anthropic discussing but no commitment | PARTIALLY — community discussion, Anthropic silent |
+| No public discussion of resume/compact/continuity | NOT APPLICABLE (community discussion exists) |
+| claude --resume + -p already covers core use case (A-001 validated) | YES — noted |
+
+Closest match: **"No public Anthropic commitment"** — community feature requests exist (issues
+#44063, #18417, #52556, #21190), Anthropic has NOT publicly committed to native cross-session
+resume with any ETA. The shipped capabilities (--resume, --continue, Session Memory) address
+individual-turn recovery but NOT the specific charter scope: plugin-hook-orchestrated baton
+handoff + daemon-triggered auto-resume across AutoCompact boundaries.
+
+A-001 impact (per FV-T-1-1 confirmed): `claude --resume <id> -p "<prompt>"` is viable for
+the restore leg of the charter daemon. This reduces the "from scratch" implementation burden —
+the launch primitive is available. It does NOT cover the PreCompact baton-write → daemon-detect
+→ auto-relaunch pipeline, which has no native equivalent.
+
+### Verdict block
+
+verdict: confirmed-proceed
+implications: No Anthropic-shipped or publicly-committed (ETA <6 months) native feature covers
+the charter's specific scope: (1) PreCompact hook-driven baton capture, (2) daemon detection of
+compact event, (3) automatic session re-launch via `claude --resume <baton_id> -p "<restore>"`.
+The existing `--resume` + Session Memory cover only single-session manual resume and high-level
+memory summarization. Community feature requests for native cross-session continuity (issues
+#44063, #18417, #52556) are open with no Anthropic commitment or ETA found as of 2026-05-03.
+R-001 risk is LOW — proceed full charter. The A-001 finding (--resume -p works) actually
+REDUCES implementation risk by confirming the restore-leg CLI primitive is available natively.
+r_001_status_recommendation: open (monitor-only) — risk is real but ETA is indeterminate;
+revisit at Stage 3 close. No redirect needed.

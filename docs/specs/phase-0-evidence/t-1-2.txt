@@ -1,0 +1,87 @@
+# task: t-1-2
+# date: 2026-05-03T11:30:18+08:00
+# claude_version: 2.1.112 (Claude Code)
+# branch: feat/v0.1.7-auto-resume-daemon
+scaffold_recreated=true
+=== FLOOD START 2026-05-03T11:31:36+08:00 ===
+Stopping here — won't execute this as requested.
+
+**Why**: file is 22.8 MB. Reading it fully and quoting every chunk would saturate my context window, kill cache efficiency, and likely break the session before producing useful output. Filename literally contains `flood` which reads as a deliberate context-exhaustion pattern.
+
+**What I can do instead** (pick one):
+1. **Structure scan** — read with offset/limit, report top-level shape (keys, array length, chunk count, types) without quoting bodies
+2. **Targeted extraction** — tell me which chunk(s) or field(s) matter; I'll quote those verbatim
+3. **Streaming summary via jq** — pipe through `jq` to extract per-chunk metadata (id, length, header) without loading bodies into my context
+4. **If this is the v0.1.7 Phase-0 evidence flood test** — confirm and I'll run it as a *measured* probe (record token cost + truncation point) rather than an actual full quote
+
+Which?
+=== FLOOD END 2026-05-03T11:32:10+08:00 exit=0 ===
+=== FLOOD2 START 2026-05-03T11:32:39+08:00 ===
+`★ Insight ─────────────────────────────────────`
+- This file is a **synthetic context-flood fixture**, not a real research document — almost certainly part of `phase-0-evidence/t-1-2.txt` work for the v0.1.7 auto-resume-daemon charter (testing how AutoCompact behaves under large tool-result payloads).
+- The shape (`{title, paragraphs[]}`) with a single repeated lorem-ipsum body across 2000 entries means the file's *information content* is ~1 paragraph, but its *token cost* is ~940KB — exactly the asymmetry you'd want to provoke compaction.
+- Reading this file directly into context (e.g. via `Read`) would have flooded the conversation; sampling + `python3 json.load` keeps the summary cheap.
+`─────────────────────────────────────────────────`
+
+## Summary of `/tmp/t-1-2-flood-small.json`
+
+**Size**: 938,942 bytes (~917 KB), single line.
+
+**Structure**:
+```
+{
+  "title": "Large Research Document",
+  "paragraphs": [ ... 2000 strings ... ]
+}
+```
+
+**Content**:
+- 2 top-level keys: `title`, `paragraphs`
+- `paragraphs` is an array of **2000 strings**, each ~463 chars
+- Each paragraph follows the pattern `"Paragraph N: <body>"` where `N` is `0..1999`
+- The `<body>` is identical across all 2000 entries — `"The quick brown fox jumps over the lazy dog."` repeated 10× per paragraph
+- **Unique bodies after stripping the `Paragraph N:` prefix: 1**
+
+**Verdict**: This is a synthetic fixture (likely a context-flood test artifact for the v0.1.7 charter's Phase 0 evidence work — see `docs/specs/phase-0-evidence/t-1-2.txt` in your untracked files), not a real document. No semantic content to summarize beyond "title + 2000 numbered repetitions of a pangram."
+=== FLOOD2 END 2026-05-03T11:33:22+08:00 exit=0 ===
+=== PLUGIN LOAD TEST START 2026-05-03T11:33:40+08:00 ===
+ping
+=== PLUGIN LOAD TEST END 2026-05-03T11:33:52+08:00 ===
+=== DEBUG CAPTURE TEST 2026-05-03T11:34:26+08:00 ===
+exit=0
+stdout lines:        1
+stderr lines:        1
+--- stdout ---
+ping
+--- stderr sample (first 20 lines) ---
+Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.
+
+=== CROSS-REFERENCE RESULTS ===
+disk_log=/tmp/t-1-2-precompact.log: NOT PRESENT (hook never fired)
+marker_in_debug_stream: NOT PRESENT (debug not emitted in --print mode)
+precompact_triggered: NO
+
+=== STRUCTURAL ANALYSIS ===
+Root cause: --print/-p mode is a one-shot fresh-context invocation.
+There is no accumulated conversation context to compact.
+AutoCompact only fires in multi-turn interactive sessions near context limit.
+Candidate C (synthetic-first) cannot trigger PreCompact via --print regardless of file size.
+
+Additional finding: --debug flag does NOT emit debug lines to stderr in --print mode
+on claude 2.1.112. Debug output is suppressed in non-interactive mode.
+(T-1-7 debug capture worked differently — T-1-7 may have captured from an interactive session).
+
+=== VERDICT: inconclusive ===
+Cannot trigger AutoCompact synthetically in <45 min wall time.
+Candidate B (real-session dogfood) required to validate A-003.
+Per charter: candidate B requires CEO CCB-Light. Do NOT auto-proceed.
+
+=== ATTEMPT LOG ===
+attempt1: 22MB flood --print => Claude safety refusal, no hook fire, exit=0
+attempt2: 917KB flood --print => Processed, no AutoCompact, no hook fire, exit=0
+attempt3: ping --print => Processed, no debug output, no hook fire, exit=0
+attempt4: ping -p split stdout/stderr => stdout=1line, stderr=1 warning only, debug absent
+
+=== GREP: T1-2-PRECOMPACT in debug stream ===
+=== GREP: T1-2-PRECOMPACT in debug stream ===
+=== END t-1-2 EVIDENCE ===
