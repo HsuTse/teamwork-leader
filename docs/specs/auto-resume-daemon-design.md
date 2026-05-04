@@ -908,3 +908,34 @@ These questions are OUT-OF-SCOPE for T-2-1 skeleton. T-2-2..T-2-6 EXECUTING task
 - cross_refs_resolved: 22/22
 - cosmetic_minors_cleaned: 9
 - verdict: PASS
+
+## §7 — Measurement Deferral & Shipping Constraint (v0.1.8 amendment)
+
+<!-- ccb: clarify 2026-05-05 — v0.1.8 charter codifies v0.1.7 degraded-mode ship rationale as explicit shipping constraint; ≤30s threshold retained; measurement deferred to v0.1.9 with reference-host prerequisite -->
+
+**Authority**: v0.1.8 charter (`feat/v0.1.8-measurement-deferral`). Added 2026-05-05. This section is ADDITIVE — it does not modify §1–§6 frozen content.
+
+### Background: v0.1.7 ship authorization via degraded-mode acceptance (d)
+
+The v0.1.7 charter (Stage 4 FINAL) closed via acceptance (d) degraded-mode authorization, as recorded in the Stage 4 close report (Appendix A.2, `docs/specs/phase-4-evidence/stage-4-close-report.txt`). The Opus independent audit (CEO_Gate_4_final) surfaced as Major C2 that the design.md Q4 commitment at line 559 — "Stage 4 will produce the first real latency data" — was not met because the developer host's `bash-hook + launchctl-guard` unconditionally intercepted `launchctl bootstrap` calls at the OS level, making real launchd-load integration impossible within the v0.1.7 charter scope. Synthetic test-mode verification confirmed all seven design-frozen acceptance criteria (AC-4-A..AC-4-G) at the code level, but the end-to-end integration surface (real daemon spawn, launchd respawn, ThrottleInterval, KeepAlive SuccessfulExit:false) was not exercised on any host. CEO approved v0.1.7 ship under this explicit caveat. v0.1.8 codifies this caveat as a permanent, inspectable shipping constraint rather than leaving it only in the close report.
+
+### Shipping constraint: four enumerated terms
+
+The following four terms collectively define the v0.1.7 → v0.1.9 measurement deferral agreement. Any future charter or auditor treating v0.1.7 as "production-verified" without reading this section is operating on an incomplete view of the design.
+
+**(a) ≤30s threshold remains the documented ship gate inherited from §1–§6.** The design.md §4 acceptance criterion AC-4-B ("baton-write → SESSION_RESUMED wall-clock latency ≤ 30 s under normal host conditions") was established as the primary KPI for the Auto-Resume Daemon feature. This threshold is NOT relaxed by this section. v0.1.9 charter (when authored) MUST address this gate as its first acceptance criterion. Any future version that ships without ≤30s confirmation on a non-guarded host is shipping under the same degraded-mode caveat as v0.1.7.
+
+**(b) Actual measurement deferred to v0.1.9.** As of v0.1.7 ship, the metric I-023-M1 (baton-write→SESSION_RESUMED wall-clock latency) has not been recorded on any host under real launchd conditions. The `tools/measure-latency.sh --daemon-present` path was authored and verified in dry-run mode (Stage 4, T-4-11 evidence: `docs/specs/phase-4-evidence/latency-daemon-present.txt`), confirming the measurement harness is ready. The gap is exclusively the absence of a non-guarded host, not a defect in the measurement tooling. v0.1.9 FIRST ACTION is: execute `tools/measure-latency.sh --daemon-present` on the reference host defined in term (c); record observed p50/p95/max; close I-023-M1 RAID entry only after ≤30s is confirmed. If measurement exceeds 30s, escalate as CCB-Heavy before shipping v0.1.9.
+
+**(c) Reference-host requirement: non-guarded macOS host.** To close the measurement deferral, v0.1.9 requires access to a macOS host meeting all of: (i) `bash-hook` (`pretooluse_guard.py` or equivalent) NOT active, OR scoped to exclude `launchctl` from its intercept pattern; (ii) `launchctl bootstrap` executable without permission denial under normal user session; (iii) `python3` available at a path resolvable by launchd `ProgramArguments`; (iv) Claude Code installable with plugin `teamwork-leader` loaded. This is the "reference host" referenced in v0.1.7 LessonsLearned L-3. Cloud Mac infra setup (e.g., GitHub Actions macOS runner or a rented Mac-in-cloud) is an acceptable substitute and is itself v0.1.9-scope per charter. The reference host requirement is a blocking prerequisite for I-023-M1 measurement — it is not optional.
+
+**(d) Acceptance (d) degraded-mode close path is the v0.1.7 ship rationale.** The Stage 4 gate closure was authorized under acceptance path (d) as defined in the Stage 4 PLANNING charter: "degraded-mode install verified (Layer 2 manual path documented; install-state.json status=manual-pending)." This means v0.1.7 is valid for distribution to users whose hosts are similarly guarded (install will fall back to Layer 2), and the daemon code paths are verified synthetically. It does NOT mean the daemon has been observed to auto-resume a real session. Users on non-guarded hosts may achieve real end-to-end behavior, but this has not been confirmed by the plugin authors as of v0.1.7.
+
+### Cross-references
+
+- LessonsLearned L-1 (kpi-deferral): `docs/archives/lessons-learned.v0.1.7.md` §L-1
+- LessonsLearned L-3 (host-environment): `docs/archives/lessons-learned.v0.1.7.md` §L-3
+- Stage 4 close report Appendix A.2 (unmeasured-KPI disclosure): `docs/specs/phase-4-evidence/stage-4-close-report.txt`
+- I-023-M1 RAID entry: `docs/archives/audit-trail.v0.1.7.jsonl` (search `event_id: I-023` or PROJECT-CLOSE-LESSONS-LEARNED)
+- AC-4-A..AC-4-G frozen acceptance criteria: this document §4 (Launchd Plist Template), subsection §Acceptance criteria
+- v0.1.8 charter authority: `PROGRESS.md` (active charter, `feat/v0.1.8-measurement-deferral` branch)

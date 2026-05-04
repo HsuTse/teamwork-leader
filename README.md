@@ -2,7 +2,7 @@
 
 > 多 agent PMP 專案編排：TeamLead 統籌 PO/RD/QA/UX/Ad-hoc 角色 PM，透過 stage-gated 流程與三道驗證閘執行專案。
 
-[![version](https://img.shields.io/badge/version-0.1.6-blue.svg)](./.claude-plugin/plugin.json)
+[![version](https://img.shields.io/badge/version-0.1.8-blue.svg)](./.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 ---
@@ -102,7 +102,8 @@ Plugin-self-contained AutoCompact resilience — 補完 cross-session resume 自
 
 **design.md FROZEN spec**：7 acceptance criteria (AC-4-A..G) + 7 cross-script integration invariants (CI-1..CI-7：baton polling / gate.lock subprocess / resume invocation / notifier subprocess / no module imports / hooks FROZEN / check-cross-refs.sh extension)。
 
-**Known limitation (v0.1.7 ship caveat)**：I-023-M1 actual baton-write→SESSION_RESUMED ≤30s wall-clock latency 在 bash-hook + launchctl-guard host **未測量**；degraded-mode close path 由 acceptance (d) authorize。**v0.1.8+ FIRST ACTION** = non-guarded reference host real measurement (per LessonsLearned L-1)。
+**已知量測缺口（v0.1.7 → v0.1.9 shipping constraint）**：v0.1.7 以 degraded-mode acceptance (d) 出貨，本機 bash-hook + launchctl-guard 結構性阻擋 launchctl bootstrap，導致 `baton-write→SESSION_RESUMED ≤30s` 主要 KPI 在真實 launchd 環境**從未量測**。對使用者影響：daemon 程式碼路徑經 synthetic 驗證但未經整合面確認；guarded host 用戶會落入 degraded-mode（Layer 2 manual install），non-guarded host 用戶**理論上**可獲得真實 auto-resume 但本團隊截至 v0.1.7 並未確認。
+v0.1.9 charter 必須先建立 non-guarded reference host（實體 Mac 或 cloud macOS runner），執行 `tools/measure-latency.sh --daemon-present` 取得 p50/p95/max 數據，確認 ≤30s 後才能移除本警語。詳見 [`docs/specs/auto-resume-daemon-design.md §7`](./docs/specs/auto-resume-daemon-design.md) 與 [`docs/archives/lessons-learned.v0.1.7.md`](./docs/archives/lessons-learned.v0.1.7.md) §L-1 / §L-3。
 
 詳見 `docs/specs/auto-resume-daemon-design.md` (FROZEN 設計文件) 與 `docs/specs/phase-4-evidence/stage-4-close-report.txt` (close report v2 post-Opus-revisions)。
 
