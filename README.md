@@ -74,6 +74,38 @@ TeamLead 會：
 | **Stage Gate** | PM 工作物 | PM dispatch 結束 | PM 自行 closure |
 | **Mini Gate_Forward** | 單一 task 的 `artifacts_touched` | KMR per-task divergence proxy 觸發 | TeamLead 自決（per-instance） |
 
+### Auto-Resume Daemon（v0.1.7）
+
+Plugin-self-contained AutoCompact resilience — 補完 cross-session resume 自動化路徑。Claude Code AutoCompact / `/clear` / 主動 pause 後，由 launchd-supervised daemon 偵測 `baton.json` `gate_state=BATON_WRITTEN` 自動 invoke `claude --resume`，免人工介入。
+
+**架構（兩階段）**：
+
+| Phase | 範圍 | 主要 artifact |
+|---|---|---|
+| Phase 1 hooks/lib (Stage 1-3) | PreCompact/SessionStart/Stop hook + baton-writer/gate-lock/handoff-builder/notifier lib + 5 measurement tools | `hooks/*.py` × 3 / `lib/*.py` × 4 / `tools/*.sh` × 5 |
+| Phase 2 daemon (Stage 4 FINAL) | launchd 長駐 daemon + 3-layer install + plist template + measurement extension | `scripts/daemon.py` 991L / `scripts/install.py` 236L / `templates/com.teamwork-leader.auto-resume-daemon.plist.in` |
+
+**daemon 5 actor states**（`scripts/daemon.py`；皆 `--self-test` synthetic CI 驗證）：
+
+- T5 BATON_WRITTEN → SESSION_RESUMED：gate.lock acquire + git stash safety net + restore_prompt allowlist + `subprocess.Popen claude --resume <session_id> -p "<restore_prompt>"`
+- T6 retry: counter file 1s/4s/16s exponential backoff；N=3 exhaust → T7
+- T7 ABORTED：`last-resume-failure.txt` + `lib/notifier.py --notify` + baton `gate_state=ABORTED` + clean exit
+- reaper：`subprocess.run(['python3', LIB_GATE_LOCK, '--reap', GATE_LOCK_PATH])` 清 stale lock
+- pid lifecycle：0o600 atomic write via `os.open(O_WRONLY|O_CREAT|O_TRUNC)` + `os.replace`；NOT removed on clean exit (launchd respawns and overwrites atomically)
+
+**install.py 3-layer**（degraded-mode tolerant）：
+
+1. Layer 1：plist render via Python `string.Template.safe_substitute` (interpolates `${CLAUDE_PLUGIN_ROOT}` + `${CLAUDE_PROJECT_DIR}`) + `subprocess.run` bootstrap
+2. Layer 2：non-zero exit / I-019 guard-block → `.teamlead/install-state.json` `{"status":"manual-pending"}` + degraded-mode warning + exit 0（NOT FAIL）
+3. Layer 3：write `install-probe.json` + 1s poll × 10s deadline + WARNING on timeout（still exit 0）
+4. `--dry-run` safe on guard-blocked hosts；`--uninstall` idempotent
+
+**design.md FROZEN spec**：7 acceptance criteria (AC-4-A..G) + 7 cross-script integration invariants (CI-1..CI-7：baton polling / gate.lock subprocess / resume invocation / notifier subprocess / no module imports / hooks FROZEN / check-cross-refs.sh extension)。
+
+**Known limitation (v0.1.7 ship caveat)**：I-023-M1 actual baton-write→SESSION_RESUMED ≤30s wall-clock latency 在 bash-hook + launchctl-guard host **未測量**；degraded-mode close path 由 acceptance (d) authorize。**v0.1.8+ FIRST ACTION** = non-guarded reference host real measurement (per LessonsLearned L-1)。
+
+詳見 `docs/specs/auto-resume-daemon-design.md` (FROZEN 設計文件) 與 `docs/specs/phase-4-evidence/stage-4-close-report.txt` (close report v2 post-Opus-revisions)。
+
 ### Anti-self-skip（v0.1.6）
 
 PLAN_AUDIT 階段的 Opus 審查者有一個特定風險：可以記錄一個真實問題，然後在 `suggested_fix` 欄位填寫 `"skip"` / `"none"` / `"no change"` — 等於 rubber-stamp 了計劃卻留下表面上的稽查記錄。Rule 7 專門關閉這個缺口。
