@@ -27,6 +27,51 @@ None. Doc-only; no API / schema / behavior changes. Existing v0.1.7 installation
 
 `[0.1.7]` was never written into this CHANGELOG at v0.1.7 release — the auto-resume daemon feature shipped with the version badge / plugin.json bumped but the `## [0.1.7]` entry was omitted. The `[0.1.8]` entry above does NOT back-fill v0.1.7 content. The full v0.1.7 release record is preserved in `docs/archives/lessons-learned.v0.1.7.md`, `docs/archives/PROGRESS.v0.1.7.md`, and `docs/specs/phase-4-evidence/stage-4-close-report.txt`. Back-fill of `[0.1.7]` entry is deferred as an OPTIONAL future CCB-Light (per RAID-I I-2 in v0.1.8 charter).
 
+## [0.1.7] — 2026-05-04 (back-filled 2026-05-05 per RAID-I I-2 / v0.1.8 CCB-Light)
+
+### Added
+
+- **Auto-Resume Daemon — Phase 1+2 (plugin-self-contained AutoCompact resilience)** — multi-charter delivery shipping a polling daemon that detects baton-write events from `hooks/stop.py` and resumes Claude Code sessions without requiring host-side cron / launchd ownership.
+- **Phase 1 — Stages 1-3** (delivered prior charters within v0.1.7 scope): 3 hooks (`stop.py` baton-write, plus session-lifecycle integration), 4 lib modules (`gate-lock.py`, schema validators, baton primitives), 5 measurement tools (`measure-latency.sh`, `measure-fault-awareness.sh`, `measure-checkout-fp.sh`, `check-cross-refs.sh`, plus phase-evidence collectors).
+- **Phase 2 — Stage 4 FINAL**:
+  - `scripts/daemon.py` (991 lines): 5 actor states (POLL / BATON_DETECTED / SESSION_RESUMING / SESSION_RESUMED / ABORTED), 5 self-test sub-flags (`--self-test-t5/-t6/-t7/-pid/-reaper`), 7-field schema validation, 1s/4s/16s exponential backoff with retry counter, ABORTED state with `last-resume-failure.txt` + notifier, stale-lock reaper subprocess, PID lifecycle (0600 perms, atomic os.replace, NOT removed on clean exit per design §3.12), crash recovery.
+  - `scripts/install.py` (236 lines): 3-layer install (plist template render → launchctl bootstrap → verification), `--dry-run` mode, `--uninstall` reverse path.
+  - `templates/com.user.claude-code-resume-daemon.plist` — launchd plist template for production deployment.
+- **`docs/specs/auto-resume-daemon-design.md`** — FROZEN design spec: 7 acceptance criteria (AC-4-A through AC-4-G), 7 cross-script invariants (CI-1..CI-7), `templates/budget-proposal.md.tpl` integration with new daemon section.
+- **`docs/specs/phase-{1,2,3,4}-evidence/`** — 4 phase-evidence dirs with reproducible artifacts (test-mode results, latency measurements, cross-refs status, real-session integration markdown, stage-4 close report).
+
+### Changed
+
+- **`README.md`** — added Auto-Resume Daemon section documenting plugin-self-contained design, install/uninstall flow, baton-write protocol, degraded-mode caveat (I-019 host-guard).
+- **`.claude-plugin/plugin.json`** — version 0.1.6 → 0.1.7.
+
+### Why
+
+Pre-v0.1.7, AutoCompact-induced session compaction would silently truncate ongoing TeamLead charter state. Recovery required manual `/teamwork-leader` re-invocation with no automated handoff signal. v0.1.7 closes this gap with a poll-driven baton-write protocol entirely owned by the plugin (no host cron / launchd ownership required for the protocol itself; only the Stage 4 daemon runner needs launchd, and that path supports degraded-mode operation when the host is bash-hook-guarded).
+
+### Migration
+
+- Existing charter projects (pre-v0.1.7): hooks remain backward compatible; baton-write protocol activates only when `hooks/stop.py` detects an active TeamLead state. No PROGRESS.md schema migration required.
+- Daemon adoption is **opt-in**: charters that don't install the daemon continue to operate exactly as before (manual resume on AutoCompact). The Phase 1 hooks function as a no-op for charters without the daemon installed.
+
+### Caveat — Shipping Constraint
+
+**I-023-M1 — actual baton-write → SESSION_RESUMED wall-clock latency is UNMEASURED in v0.1.7.** The single quantitative success metric committed in `design.md` Q4 ("Stage 4 will produce the first real latency data + report observed at Stage 4 close") could not be measured on the developer's bash-hook + launchctl-guarded macOS host (per RAID-I I-019). The daemon ships under acceptance path (d) — degraded-mode close, with explicit CEO acceptance of unmeasured KPI granted at `CEO_Gate_4_final`.
+
+  - Synthetic `--self-test-t5` path: sub-second by design (no I/O — not representative of production).
+  - Production poll-path estimate: 10-15s (DESIGN-LEVEL only, NOT measured).
+  - **Real measurement deferred to v0.1.9 first-action** on a non-guarded reference host.
+
+This shipping constraint is formally codified in `[0.1.8]` via `docs/specs/auto-resume-daemon-design.md §7` (Measurement Deferral & Shipping Constraint amendment) and `docs/archives/lessons-learned.v0.1.7.md` §L-1 / §L-3. See `[0.1.8]` Why for the codification rationale.
+
+### Note (back-fill rationale)
+
+This `[0.1.7]` entry was reconstructed post-ship from archive sources after being omitted at original v0.1.7 release (only `plugin.json` + README badge bumped; CHANGELOG entry was forgotten). v0.1.8's `### Note: [0.1.7] CHANGELOG entry not back-filled` subsection deferred this back-fill as optional CCB-Light per RAID-I I-2 in v0.1.8 charter; this entry now closes that backlog item.
+
+  - **Source archives (canonical record)**: `docs/archives/lessons-learned.v0.1.7.md` (L-1..L-4), `docs/archives/PROGRESS.v0.1.7.md` (Stage Histories + Self-Audit), `docs/specs/phase-4-evidence/stage-4-close-report.txt` (Sections 1-7 + Appendix A post-Opus revisions).
+  - **What this entry does NOT do**: re-tag v0.1.7 (already published 2026-05-04); modify the GitHub release page (preserved as-was); restate Stage-by-Stage internal kT breakdown (canonical record lives in archives).
+  - **Project total kT**: ~453 kT across all 4 stages (Stage 4: ~173 kT vs Plan B 155 baseline; +18 kT / 11.6% over Plan B but well within Plan A 250 kT envelope).
+
 ## [0.1.6] — 2026-05-03
 
 ### Added
