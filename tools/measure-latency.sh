@@ -77,7 +77,9 @@ SELF_TEST="${1:-}"
 BATON_WRITER="$PLUGIN_ROOT/lib/baton-writer.py"
 TEAMLEAD_DIR="$PROJECT_DIR/.teamlead"
 BATON_PATH="$TEAMLEAD_DIR/baton.json"
-EVIDENCE_DIR="$PLUGIN_ROOT/docs/specs/phase-3-evidence"
+# I-068: evidence dir is overridable via TWL_EVIDENCE_DIR env var; default
+# preserves v0.1.7 behavior (hardcoded phase-3-evidence path) for backward compat.
+EVIDENCE_DIR="${TWL_EVIDENCE_DIR:-$PLUGIN_ROOT/docs/specs/phase-3-evidence}"
 EVIDENCE_FILE="$EVIDENCE_DIR/latency-precompact-to-daemon.txt"
 POLL_TIMEOUT="${LATENCY_POLL_TIMEOUT:-30}"
 
@@ -85,7 +87,8 @@ POLL_TIMEOUT="${LATENCY_POLL_TIMEOUT:-30}"
 # Additive extension: existing invocation without --dry-run is unchanged.
 
 if [[ "${1:-}" == "--dry-run" ]]; then
-  DRY_RUN_EVIDENCE_DIR="$PLUGIN_ROOT/docs/specs/phase-4-evidence"
+  # I-068: dry-run evidence dir is also overridable via TWL_EVIDENCE_DIR.
+  DRY_RUN_EVIDENCE_DIR="${TWL_EVIDENCE_DIR:-$PLUGIN_ROOT/docs/specs/phase-4-evidence}"
   DRY_RUN_EVIDENCE_FILE="$DRY_RUN_EVIDENCE_DIR/latency-daemon-present.txt"
   mkdir -p "$DRY_RUN_EVIDENCE_DIR"
 
