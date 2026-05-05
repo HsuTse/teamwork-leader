@@ -201,6 +201,8 @@ This state implements the **subagent-driven-development PATTERN** (per `reuse-ma
 6. **Dispatch Sonnet step-reviewer** (per `auto-review-cadence.md §Coding Cadence`):
    - `subagent_type: general-purpose`, `model: sonnet`
    - Inputs: task scope, RD's diff, surgical-change rubric from `references/discipline/surgical-change.md`
+   - **Attribution-truth check (MUST; v0.1.7 L-2)**: if this task's `artifacts_touched` includes Gate_Forward / Gate_Requirement audit-trail writes, step-reviewer MUST verify that any AC key cited in those writes matches design.md FROZEN spec enumeration — existence-grep of the key string is insufficient; verify the key traces to an AC in design.md §N. A review that passes on existence-grep alone with unverified attribution is a rubric failure.
+   <!-- L-2 codified rubric items: this step + §GATING attribution-truth paragraph (lines ~292-294); historical name 'step-review-rubric' -->
    - Output: `verdict: PASS | PASS_WITH_MINOR | FAIL`
 7. **On step-reviewer verdict**:
    - `PASS` → mark task complete in tasks.md (RD writes), continue loop
@@ -290,7 +292,7 @@ If any cross-PM verification fails (sibling PM disputes original claim) → reve
 
 **Anti-rubber-stamp on QA**: TeamLead independently re-runs ≥1 of QA's `verify_evidence` commands per stage (sampling: highest-risk + lowest-confidence; log both selections in `## Self-Audit`).
 
-**Attribution-truth on TeamLead-owned gate artifacts (advisory; v0.1.7 lesson I-071)**: when TeamLead writes Gate_Forward / Gate_Requirement audit-trail keys naming acceptance criteria, AC labels SHOULD match design.md FROZEN spec attribution. Post-hoc TeamLead-coined keys (e.g., `AC_4_H_*` / `AC_4_I_*` / `AC_4_J_*` added during gate runtime in v0.1.7 stage 4 when design.md only enumerated AC-4-A through AC-4-G) should be relabeled as `task_acceptance_*` or `tasks_md_acceptance_*`, not as design-frozen `AC_*` keys. This avoids retroactive-attribution drift where a Charter close report claims "10 design AC met" when design.md only specified 7. Recommended discipline, not a state-machine block.
+**Attribution-truth on TeamLead-owned gate artifacts (MUST; v0.1.7 L-2 codified v0.1.9)**: when TeamLead writes Gate_Forward / Gate_Requirement audit-trail keys naming acceptance criteria, AC labels MUST match design.md FROZEN spec attribution. Post-hoc TeamLead-coined keys (e.g., `AC_4_H_*` / `AC_4_I_*` / `AC_4_J_*` added during gate runtime in v0.1.7 stage 4 when design.md only enumerated AC-4-A through AC-4-G) MUST be relabeled as `task_acceptance_*` or `tasks_md_acceptance_*`, not as design-frozen `AC_*` keys. This avoids retroactive-attribution drift where a Charter close report claims "10 design AC met" when design.md only specified 7. **If attribution drift is found at gate close, TeamLead MUST log a CCB-Light entry per `templates/ccb-light.md.tpl` before marking the gate PASS. CCB-Light entries written to log attribution drift are themselves exempt from re-triggering this rule (the CCB-Light entry IS the remediation; re-checking it would create a self-referential loop). The enforcement clause fires at most ONCE per gate-close event, not per audit-trail key written.** MUST-level discipline.
 
 ---
 

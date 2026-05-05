@@ -1,0 +1,154 @@
+name: measure-latency — I-023-M1 GHA macOS smoke
+
+on:
+  push:
+    branches:
+      - feat/v0.1.9-measurement
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  smoke-macos:
+    strategy:
+      matrix:
+        os: [macos-14, macos-13]
+      fail-fast: false                  # per-arch independent (C-1)
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    env:
+      CLAUDE_PLUGIN_ROOT: ${{ github.workspace }}
+      CLAUDE_PROJECT_DIR: ${{ runner.temp }}/teamlead-project
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Create .teamlead workspace
+        run: mkdir -p "$CLAUDE_PROJECT_DIR/.teamlead"
+
+      - name: Smoke — measure-latency.sh --self-test
+        run: bash tools/measure-latency.sh --self-test
+
+      - name: Q1.5 — install.py launchctl bootstrap (capture output)
+        id: install_step
+        run: |
+          set +e
+          python3 scripts/install.py 2>&1 | tee /tmp/install-output.txt
+          INSTALL_EXIT=${PIPESTATUS[0]}
+          echo "install_exit=$INSTALL_EXIT" >> "$GITHUB_OUTPUT"
+
+      - name: Q1.5 — DUAL detection (per Opus C-2)
+        id: dual_detect
+        run: |
+          set +e
+          # Vector 1: stdout grep
+          STDOUT_DEGRADED=0
+          if grep -q "MANUAL INSTALLATION REQUIRED" /tmp/install-output.txt; then
+            STDOUT_DEGRADED=1
+          fi
+
+          # Vector 2: install-state.json status check
+          STATE_DEGRADED=0
+          STATE_FILE="$CLAUDE_PROJECT_DIR/.teamlead/install-state.json"
+          if [[ -f "$STATE_FILE" ]]; then
+            STATUS=$(python3 -c "import json; print(json.load(open('$STATE_FILE')).get('status', 'unknown'))" 2>/dev/null)
+            if [[ "$STATUS" == "manual-pending" ]]; then
+              STATE_DEGRADED=1
+            fi
+          fi
+
+          # PASS = both signals NEGATIVE; either positive → fail-fast
+          echo "stdout_degraded=$STDOUT_DEGRADED" >> "$GITHUB_OUTPUT"
+          echo "state_degraded=$STATE_DEGRADED" >> "$GITHUB_OUTPUT"
+
+          if [[ "$STDOUT_DEGRADED" -eq 0 && "$STATE_DEGRADED" -eq 0 ]]; then
+            echo "Q1.5: PASS on ${{ matrix.os }}" >> "$GITHUB_STEP_SUMMARY"
+            echo "result=PASS" >> "$GITHUB_OUTPUT"
+            exit 0
+          else
+            echo "Q1.5: FAIL on ${{ matrix.os }} (stdout_degraded=$STDOUT_DEGRADED, state_degraded=$STATE_DEGRADED)" >> "$GITHUB_STEP_SUMMARY"
+            echo "result=FAIL" >> "$GITHUB_OUTPUT"
+            grep -A 5 "launchctl\|bootstrap" /tmp/install-output.txt >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+            exit 1
+          fi
+
+      - name: Q1.5 — launchctl print verify (only if PASS)
+        if: steps.dual_detect.outputs.result == 'PASS'
+        run: |
+          launchctl print "gui/$(id -u)/com.teamwork-leader.auto-resume-daemon" \
+            | tee /tmp/launchctl-print.txt
+          grep -i "com.teamwork-leader" /tmp/launchctl-print.txt
+
+      - name: Capture per-arch evidence (C-3)
+        if: always()
+        run: |
+          EVIDENCE_DIR=docs/archives
+          mkdir -p $EVIDENCE_DIR
+          PARTIAL_FILE=$EVIDENCE_DIR/measurement.v0.1.9.${{ matrix.os }}.partial.md
+
+          cat > $PARTIAL_FILE <<MDEOF
+          # Measurement evidence (T-1-a partial) — ${{ matrix.os }}
+
+          - Run: ${{ github.run_id }}
+          - Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          - Arch: ${{ runner.arch }}
+          - OS: ${{ runner.os }} ${{ matrix.os }}
+          - install_exit: ${{ steps.install_step.outputs.install_exit }}
+          - stdout_degraded: ${{ steps.dual_detect.outputs.stdout_degraded }}
+          - state_degraded: ${{ steps.dual_detect.outputs.state_degraded }}
+          - Q1.5_result: ${{ steps.dual_detect.outputs.result }}
+
+          ## install.py output (truncated)
+          \`\`\`
+          $(head -100 /tmp/install-output.txt 2>/dev/null || echo "<no output>")
+          \`\`\`
+
+          ## launchctl print output (if PASS)
+          \`\`\`
+          $(cat /tmp/launchctl-print.txt 2>/dev/null || echo "<not run>")
+          \`\`\`
+          MDEOF
+          cat $PARTIAL_FILE
+
+      - name: Upload per-arch evidence artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: t1a-evidence-${{ matrix.os }}
+          path: docs/archives/measurement.v0.1.9.${{ matrix.os }}.partial.md
+          retention-days: 30
+
+      - name: Cleanup — bootout daemon
+        if: always()
+        run: python3 scripts/install.py --uninstall 2>/dev/null || true
+
+  # Workflow-level gate per Opus C-1: at-least-macos-14-PASS DoD
+  workflow-gate:
+    needs: smoke-macos
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate matrix results (C-1 at-least-macos-14)
+        env:
+          MATRIX_RESULT: ${{ needs.smoke-macos.result }}
+        run: |
+          # GHA matrix.result is success only if ALL jobs PASS; we need finer detection
+          # via downloading per-arch artifacts. For simplicity: surface the result type
+          # and rely on downstream T-1-c QA to inspect the per-arch partials.
+          if [[ "$MATRIX_RESULT" == "success" ]]; then
+            echo "Q1.5 matrix: BOTH arches PASS — T-1-c can proceed on either" >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$MATRIX_RESULT" == "failure" ]]; then
+            echo "Q1.5 matrix: at least one arch FAILED — T-1-c kickoff gate evaluates per-arch partials" >> "$GITHUB_STEP_SUMMARY"
+            echo "Decision rule (per Opus C-1): at-least-macos-14 PASS → T-1-c proceeds on macos-14 only with x86_64 caveat; macos-14 only FAIL with macos-13 PASS → T-1-c degraded path with arch-mismatch caveat; BOTH FAIL → Q0 fallback fires (v0.1.9 → MEASUREMENT-DEFERRED-AGAIN)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          # This job does not exit non-zero based on partials; T-1-c QA evaluates
+          # post-hoc via artifact download (per Opus M-2 kickoff gate).
