@@ -31,8 +31,8 @@ Historical `[0.1.7]` and `[0.1.8]` entries are NOT retroactively rewritten — t
 ```markdown
 ### Notes
 
-- Skip-version 0.1.6 → 0.1.8 was intentional (charter freeze on 0.1.7 mid-flight; see RAID-I I-2).
-- v0.1.7 CHANGELOG back-fill is a separate optional CCB-Light, not blocking this release.
+- Skip-version 0.1.6 → 0.1.8 was intentional (charter freeze on 0.1.7 mid-flight; see PROGRESS.md for context).
+- v0.1.7 CHANGELOG back-fill is a separate optional follow-up, not blocking this release.
 ```
 
 **Good (inline within `### Why`)**:

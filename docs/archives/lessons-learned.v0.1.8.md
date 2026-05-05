@@ -5,7 +5,7 @@
 **Stage 1 actual**: `137 kT` vs `120 kT` baseline (+14% over; 22 kT contingency partially used)
 **Outcome**: APPROVED + shipped (tag v0.1.8 + PR #5 merged as `5c5e12b`)
 
-**Status of each lesson**: each entry below records **Statement** (what happened) / **v0.1.8 disposition** (how this charter handled it) / **v0.1.9 inheritance** (what next charter inherits) / **How to apply** (operator-facing actionability). `**Category**` field tags the lesson domain for cross-version analytics.
+**Status of each lesson**: each entry below records up to four fields — **Statement** (what happened) / **v0.1.8 disposition** (how this charter handled it) / **v0.1.9 inheritance** (what next charter inherits) / **How to apply** (operator-facing actionability, when applicable). `**Category**` field tags the lesson domain for cross-version analytics.
 
 ---
 
