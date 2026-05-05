@@ -21,7 +21,7 @@ jobs:
 
     env:
       CLAUDE_PLUGIN_ROOT: ${{ github.workspace }}
-      CLAUDE_PROJECT_DIR: ${{ runner.temp }}/teamlead-project
+      CLAUDE_PROJECT_DIR: ${{ github.workspace }}/.teamlead-project
 
     steps:
       - name: Checkout repository
