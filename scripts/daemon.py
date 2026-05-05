@@ -57,7 +57,14 @@ GATE_STATE_RESUMED = "SESSION_RESUMED"  # design.md line 65
 
 # restore_prompt allowlist per design.md §5 T-S-2 lines 628-630:
 # ASCII letters, digits, whitespace (space/tab/\n), common punctuation.
-# Disallowed: backtick, bare $, ${, NUL, control chars other than \n/\t.
+# Disallowed (enforced by per-char loop in _validate_restore_prompt):
+#   backtick, bare '$', '${', NUL.
+# I-059 (v0.1.7 RAID-I, deferred annotation): the regex below uses \s
+# (any whitespace), which permits \r in addition to \n/\t. v0.1.7
+# stage-4-close-report classified this as "logic correct, no operator
+# impact" and shipped as-is. Comment updated post-ship to truthfully
+# describe behavior; regex unchanged (FROZEN spec deviation reconciliation
+# would be CCB-Heavy and is deferred to v0.1.9+).
 _RESTORE_PROMPT_ALLOWLIST_RE = re.compile(
     r"^[\w\s.,;:\-_/()\[\]{}<>#@!?'\"]*$",
     re.UNICODE,
@@ -893,10 +900,10 @@ def _daemon_loop(watch_dir: str) -> int:
     """Infinite poll loop: check baton.json mtime every 5 s.
 
     On mtime change:
-    1. Run stale-lock reaper (T-4-6 placeholder).
+    1. Run stale-lock reaper (T-4-6, see _run_stale_lock_reaper below).
     2. Read + validate baton schema.
     3. Check gate_state == BATON_WRITTEN.
-    4. Hand off to T5 actor (T-4-3, not implemented here).
+    4. Hand off to T5 actor (T-4-3, see _t5_session_resume below).
     """
     baton_path = os.path.join(watch_dir, "baton.json")
     last_mtime: float | None = None

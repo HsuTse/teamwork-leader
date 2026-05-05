@@ -72,7 +72,9 @@ SELF_TEST="${1:-}"
 STOP_HOOK="$PLUGIN_ROOT/hooks/stop.py"
 TEAMLEAD_DIR="$PROJECT_DIR/.teamlead"
 FAILURE_FILE="$TEAMLEAD_DIR/last-resume-failure.txt"
-EVIDENCE_DIR="$PLUGIN_ROOT/docs/specs/phase-3-evidence"
+# I-068: evidence dir is overridable via TWL_EVIDENCE_DIR env var; default
+# preserves v0.1.7 behavior (hardcoded phase-3-evidence path) for backward compat.
+EVIDENCE_DIR="${TWL_EVIDENCE_DIR:-$PLUGIN_ROOT/docs/specs/phase-3-evidence}"
 EVIDENCE_FILE="$EVIDENCE_DIR/latency-fault-to-awareness.txt"
 
 # ── validate dependencies ─────────────────────────────────────────────────────

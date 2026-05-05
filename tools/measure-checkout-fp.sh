@@ -83,7 +83,9 @@ SELF_TEST="${1:-}"
 
 SESSION_START="$PLUGIN_ROOT/hooks/session-start.py"
 WRITE_BATON_SCRIPT="$PLUGIN_ROOT/tools/write-synthetic-baton.py"
-EVIDENCE_DIR="$PLUGIN_ROOT/docs/specs/phase-3-evidence"
+# I-068: evidence dir is overridable via TWL_EVIDENCE_DIR env var; default
+# preserves v0.1.7 behavior (hardcoded phase-3-evidence path) for backward compat.
+EVIDENCE_DIR="${TWL_EVIDENCE_DIR:-$PLUGIN_ROOT/docs/specs/phase-3-evidence}"
 EVIDENCE_FILE="$EVIDENCE_DIR/false-positive-checkout.txt"
 TMP_BATON="/tmp/teamlead-fp-test-baton-$$.json"
 
