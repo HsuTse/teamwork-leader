@@ -256,6 +256,8 @@ Field constraints:
 - `kmr_verdict` (Phase 3 T12) — `"PASS" | "PARTIAL" | "FAIL" | "INCONCLUSIVE"` (Mini Gate_Forward classifier verdict) or `null` if not fired
 - `kmr_root_cause` (Phase 3 T12) — `"code_bug" | "spec_ambiguity" | "spec_gap" | "environmental" | "inconclusive"` from Mini Gate classifier when verdict ≠ PASS; `null` otherwise
 - `kmr_skipped` (Phase 3 migration) — boolean: `true` if dispatch lacked a `pre-task-estimates.jsonl` entry (legacy pre-rollout dispatch carried into a post-rollout stage); `false` for normal dispatches; `null` if KMR mode is disabled per `kmr_mode` knob
+
+> **Note (v0.1.8 lesson L-4 — KMR fire vs trust_tier)**: `kmr_fired: true` is a *divergence-worth-checking signal*; it does NOT by itself imply PM untrustworthy work. `trust_tier` change requires actual evidence of unverified output (e.g., Mini Gate verdict ≠ PASS, or anti-rubber-stamp Rule 2 sampling reveals discrepancy). The two fields are deliberately distinct — keep them so when computing trust analytics. A KMR fire with `kmr_verdict: PASS` (verified via direct artifact check) is a calibration data point only, not grounds for tier downgrade.
 - `plan_audit_self_skip_detected` (v0.1.6) — `boolean | null`: Rule 7 outcome for PLAN_AUDIT-phase Opus reviewer dispatches. Follows the `kmr_*` pattern (structured field, not `notes`):
   - `true` — Rule 7 fired this PLAN_AUDIT session: at least one `suggested_fix` blacklisted value was detected in the reviewer's structured output
   - `false` — Rule 7 ran but no detection (clean pass — all `suggested_fix` values were actionable, or no issues were logged)

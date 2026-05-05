@@ -290,6 +290,8 @@ If any cross-PM verification fails (sibling PM disputes original claim) → reve
 
 **Anti-rubber-stamp on QA**: TeamLead independently re-runs ≥1 of QA's `verify_evidence` commands per stage (sampling: highest-risk + lowest-confidence; log both selections in `## Self-Audit`).
 
+**Attribution-truth on TeamLead-owned gate artifacts (advisory; v0.1.7 lesson I-071)**: when TeamLead writes Gate_Forward / Gate_Requirement audit-trail keys naming acceptance criteria, AC labels SHOULD match design.md FROZEN spec attribution. Post-hoc TeamLead-coined keys (e.g., `AC_4_H_*` / `AC_4_I_*` / `AC_4_J_*` added during gate runtime in v0.1.7 stage 4 when design.md only enumerated AC-4-A through AC-4-G) should be relabeled as `task_acceptance_*` or `tasks_md_acceptance_*`, not as design-frozen `AC_*` keys. This avoids retroactive-attribution drift where a Charter close report claims "10 design AC met" when design.md only specified 7. Recommended discipline, not a state-machine block.
+
 ---
 
 ## §REPORTING
@@ -380,6 +382,14 @@ If any cross-PM verification fails (sibling PM disputes original claim) → reve
    - Loop to PLANNING for Stage_<N+1>
 
 This rule is **mandatory** — without it, ProjectClose / Lessons-learned / MemoryEntry never fire after the last stage approves. Step 0 is **mandatory** — never cache final-stage value across stages, since CCB-Heavy may have shifted it.
+
+### Auto-merge boundary (advisory; v0.1.8 lesson L-2)
+
+When ProjectClose ships ride a feature-branch PR, **`CEO_Gate_Final approve` verb scope should be read as "open PR" only**, not "merge PR to main". Merging to main = shared/production state mutation; recommended to treat it as a separate `merge` verb at a distinct gate.
+
+- Practical effect: after CEO_Gate_Final approve, TeamLead may push the branch + tag + open PR + run §ProjectClose protocol steps 1-3 (LessonsLearned / CleanupGate / MemoryEntry), but should pause for a separate CEO `merge` verb before merging to main. Permission hooks that block self-merge are correct security boundaries, not friction to bypass.
+- Origin: v0.1.8 charter ProjectClose attempted auto-merge after `approve`; permission hook blocked; CEO had to issue explicit `merge` verb. Codified here for future charter authors.
+- This is a **discipline guideline**, not a state-machine rule — operators may deviate when CEO explicitly authorized merge as part of a single `approve` verb.
 
 ---
 
