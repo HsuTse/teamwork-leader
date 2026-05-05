@@ -80,14 +80,18 @@ jobs:
           cp tools/claude-stub.sh "$STUB_DIR/claude"
           chmod +x "$STUB_DIR/claude"
           echo "$STUB_DIR" >> "$GITHUB_PATH"
+          # Also expose STUB_DIR for plist PATH injection (launchd does not inherit
+          # the shell PATH; the stub must be explicitly added to the plist env).
+          echo "STUB_DIR=$STUB_DIR" >> "$GITHUB_ENV"
           echo "Stub claude installed at $STUB_DIR/claude"
 
       # ── Capture GHA python3 path for plist patching ─────────────────────────────
-      # launchd uses a restricted PATH (/usr/bin:/bin:/usr/sbin:/sbin). On macOS 14
-      # the system python3 resolves to Python 3.9, which does not support the
-      # list[str]|None union syntax in daemon.py (requires Python 3.10+). We capture
-      # the GHA-installed python3 path here and expose it as PYTHON3_PATH for use in
-      # the plist-patch helper (added after each launchctl bootstrap call below).
+      # Two launchd environment problems patched by tools/patch-plist-python3.py:
+      # (1) Python version: launchd resolves python3 to system Python 3.9 (macOS 14);
+      #     daemon.py requires Python 3.10+ for list[str]|None syntax. Fix: replace
+      #     /usr/bin/env+python3 in ProgramArguments with the absolute GHA python3 path.
+      # (2) claude stub visibility: stub is in $HOME/.local/bin which is not in
+      #     launchd's default PATH. Fix: inject PATH into plist EnvironmentVariables.
       - name: Capture GHA python3 path
         id: python3_path
         run: |
@@ -230,8 +234,8 @@ jobs:
             # macOS 14 is 3.9 and crashes at import time. tools/patch-plist-python3.py
             # replaces /usr/bin/env+python3 with the absolute GHA python3 path, then
             # we reload launchd so the patched plist takes effect.
-            echo "  [C-3b] Patching plist to use GHA python3: $PYTHON3_PATH"
-            python3 tools/patch-plist-python3.py "$PLIST_PATH" "$PYTHON3_PATH"
+            echo "  [C-3b] Patching plist: python3=$PYTHON3_PATH stub_dir=$STUB_DIR"
+            python3 tools/patch-plist-python3.py "$PLIST_PATH" "$PYTHON3_PATH" "$STUB_DIR"
 
             # Reload launchd with patched plist
             echo "  [C-3b] Reloading launchd with patched plist..."
@@ -319,8 +323,8 @@ jobs:
 
           # Patch plist to use GHA python3 (not system python3 3.9)
           PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_FILENAME"
-          echo "Patching plist to use GHA python3: $PYTHON3_PATH"
-          python3 tools/patch-plist-python3.py "$PLIST_PATH" "$PYTHON3_PATH"
+          echo "Patching plist: python3=$PYTHON3_PATH stub_dir=$STUB_DIR"
+          python3 tools/patch-plist-python3.py "$PLIST_PATH" "$PYTHON3_PATH" "$STUB_DIR"
 
           # Reload launchd with patched plist
           UID_VAL=$(id -u)
