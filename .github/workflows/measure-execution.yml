@@ -82,6 +82,21 @@ jobs:
           echo "$STUB_DIR" >> "$GITHUB_PATH"
           echo "Stub claude installed at $STUB_DIR/claude"
 
+      # ── Capture GHA python3 path for plist patching ─────────────────────────────
+      # launchd uses a restricted PATH (/usr/bin:/bin:/usr/sbin:/sbin). On macOS 14
+      # the system python3 resolves to Python 3.9, which does not support the
+      # list[str]|None union syntax in daemon.py (requires Python 3.10+). We capture
+      # the GHA-installed python3 path here and expose it as PYTHON3_PATH for use in
+      # the plist-patch helper (added after each launchctl bootstrap call below).
+      - name: Capture GHA python3 path
+        id: python3_path
+        run: |
+          PYTHON3_PATH=$(which python3)
+          echo "PYTHON3_PATH=$PYTHON3_PATH" >> "$GITHUB_ENV"
+          echo "python3_path=$PYTHON3_PATH" >> "$GITHUB_OUTPUT"
+          echo "GHA python3 path: $PYTHON3_PATH"
+          "$PYTHON3_PATH" --version
+
       - name: Verify stub claude is on PATH
         run: |
           which claude
@@ -209,6 +224,23 @@ jobs:
               COLD_FAILED=$((COLD_FAILED + 1))
               continue
             fi
+
+            # C-3b: Patch plist to use GHA python3 (not system python3 3.9)
+            # daemon.py uses list[str]|None syntax (Python 3.10+); system python3 on
+            # macOS 14 is 3.9 and crashes at import time. tools/patch-plist-python3.py
+            # replaces /usr/bin/env+python3 with the absolute GHA python3 path, then
+            # we reload launchd so the patched plist takes effect.
+            echo "  [C-3b] Patching plist to use GHA python3: $PYTHON3_PATH"
+            python3 tools/patch-plist-python3.py "$PLIST_PATH" "$PYTHON3_PATH"
+
+            # Reload launchd with patched plist
+            echo "  [C-3b] Reloading launchd with patched plist..."
+            UID_VAL=$(id -u)
+            launchctl bootout "gui/$UID_VAL" "$PLIST_PATH" 2>/dev/null || true
+            sleep 2
+            launchctl bootstrap "gui/$UID_VAL" "$PLIST_PATH"
+            echo "  [C-3b] Plist patched and reloaded"
+
             echo "  [C-3] Install PASS"
 
             # C-4: Poll for SESSION_RESUMED
@@ -284,6 +316,19 @@ jobs:
             echo "warm_baseline=FAIL" >> "$GITHUB_OUTPUT"
             exit 1
           fi
+
+          # Patch plist to use GHA python3 (not system python3 3.9)
+          PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_FILENAME"
+          echo "Patching plist to use GHA python3: $PYTHON3_PATH"
+          python3 tools/patch-plist-python3.py "$PLIST_PATH" "$PYTHON3_PATH"
+
+          # Reload launchd with patched plist
+          UID_VAL=$(id -u)
+          launchctl bootout "gui/$UID_VAL" "$PLIST_PATH" 2>/dev/null || true
+          sleep 2
+          launchctl bootstrap "gui/$UID_VAL" "$PLIST_PATH"
+          echo "Plist patched and reloaded"
+
           echo "Warm baseline install PASS"
           echo "warm_baseline=PASS" >> "$GITHUB_OUTPUT"
           # Allow daemon to stabilize before warm-start loop
