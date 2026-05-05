@@ -5,9 +5,13 @@
 **Stage 1 actual**: `137 kT` vs `120 kT` baseline (+14% over; 22 kT contingency partially used)
 **Outcome**: APPROVED + shipped (tag v0.1.8 + PR #5 merged as `5c5e12b`)
 
+**Status of each lesson**: each entry below records up to four fields — **Statement** (what happened) / **v0.1.8 disposition** (how this charter handled it) / **v0.1.9 inheritance** (what next charter inherits) / **How to apply** (operator-facing actionability, when applicable). `**Category**` field tags the lesson domain for cross-version analytics.
+
 ---
 
-## L-1: Anti-scope-creep mandate held end-to-end
+## L-1 — Anti-scope-creep mandate held end-to-end
+
+**Category**: charter-discipline
 
 **Statement**: User issued anti-scope-creep mandate twice during Discovery (「盡量避免 Spec 被擴大」 × 2). TeamLead consulted Opus advisors before each Discovery question batch and surfaced scope-risk options explicitly (e.g., Q3 「本機 try-to-bypass」 flagged as #1 scope-creep risk by both Opus and TeamLead, leading user to switch from initial Q3 pick to (a) Defer + codify shipping constraint).
 
@@ -19,7 +23,9 @@
 
 ---
 
-## L-2: Auto-merge boundary distinct from CEO_Gate_Final approve
+## L-2 — Auto-merge boundary distinct from CEO_Gate_Final approve
+
+**Category**: governance-gate
 
 **Statement**: TeamLead attempted `gh pr merge` after CEO_Gate_Final approve verb, on the assumption that "open PR + ship" implied "merge PR". Permission hook correctly denied: CEO_Gate_Final approve was scoped to "open PR" only; merge to main = shared/production state requires separate CEO merge gate.
 
@@ -31,7 +37,9 @@
 
 ---
 
-## L-3: docs/archives/ flat-versioned naming proven across artifact types
+## L-3 — docs/archives/ flat-versioned naming proven across artifact types
+
+**Category**: archive-pattern
 
 **Statement**: Opus PLAN_AUDIT blocker on T-1-2 location ruled `docs/archives/lessons-learned.v0.1.7.md` (flat-versioned) over PO's original `docs/lessons-learned/v0.1.7.md` (subdir), based on `docs/archives/PROGRESS.v0.1.7.md` precedent. Pattern now proven across 3 artifact types: PROGRESS / tasks / lessons-learned.
 
@@ -43,7 +51,9 @@
 
 ---
 
-## L-4: KMR Mini Gate firing without trust_tier change is a feature, not a bug
+## L-4 — KMR Mini Gate firing without trust_tier change is a feature, not a bug
+
+**Category**: observability
 
 **Statement**: Stage 1 saw `2` KMR fires (`T-1-3` proxy=9, `T-1-5` proxy=5; both root_cause=budget_underestimate, both budget_surprise signals from RD plan estimate underestimation). Mini Gate verdict PASS for both via direct Bash verify. No trust_tier change because TeamLead Rule 2 + Sonnet step-review had already double-verified each artifact prior to the fires.
 
@@ -57,16 +67,16 @@
 
 ## Calibration data
 
-| Metric | Baseline | Actual | Delta |
-|---|---|---|---|
-| Stage 1 budget | `120 kT` | `137 kT` | +14% (over; contingency partially used) |
-| Tasks executed | 8 | 8 | 0 |
-| Schema validation pass-on-first | 8/8 | 7/8 | -1 (`T-1-4` retried) |
-| KMR fires | n/a baseline | 2 (`T-1-3`, `T-1-5`) | both budget_surprise; verdict PASS |
-| Step-review failures | 0 | 0 | 0 |
-| Opus PLAN_AUDIT verdict | APPROVED | APPROVED_WITH_REVISIONS | revisions applied |
-| Opus final review verdict | APPROVED | APPROVED | 0 issues |
-| RAID-I net delta | 0 | 0 | held |
+| Metric | Baseline | Actual | Delta | Note |
+|---|---|---|---|---|
+| Stage 1 budget | `120 kT` | `137 kT` | +14% | contingency partially used |
+| Tasks executed | 8 | 8 | 0 | — |
+| Schema validation pass-on-first | 8/8 | 7/8 | -1 | `T-1-4` retried |
+| KMR fires | n/a | 2 | +2 | `T-1-3`, `T-1-5`; both budget_surprise; verdict PASS |
+| Step-review failures | 0 | 0 | 0 | — |
+| Opus PLAN_AUDIT verdict | APPROVED | APPROVED_WITH_REVISIONS | — | revisions applied |
+| Opus final review verdict | APPROVED | APPROVED | — | 0 issues |
+| RAID-I net delta | 0 | 0 | 0 | held |
 
 ---
 

@@ -46,6 +46,7 @@ You will self-report `dod_status: met | partial | missed` in the return contract
 1. **Do NOT exceed scope.** Out-of-scope discoveries → return as RAID-I issue, do not act.
 2. **Surgical changes only** (per `references/discipline/surgical-change.md`).
 3. **Verification per `references/discipline/testing-discipline.md`** — provide command + key output evidence.
+4. **Design.md cross-check (advisory; v0.1.7 lesson I-066)** — when your task references a design.md FROZEN spec acceptance criterion (e.g., `AC-X-Y`, `CI-X`, design §N.M), you SHOULD open and verify the cited section before executing. Recurring v0.1.7 finding: tasks.md descriptions silently drifted from design.md FROZEN spec (T-4-1 / T-4-7 inverted intent until step-review caught them); explicit cross-check at dispatch entry catches the drift before code is written. This is a recommended discipline, not a blocking gate.
 
 ### Skill usage rules
 
