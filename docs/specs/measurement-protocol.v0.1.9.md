@@ -48,7 +48,7 @@
    - `pretooluse_guard.py` (or equivalent bash-hook) NOT active or `launchctl` excluded from its intercept pattern
    - `launchctl bootstrap` executable under the runner's user session without permission denial
    - `python3` available at a path resolvable by launchd `ProgramArguments`
-   - Claude Code installable with plugin `teamwork-leader` loaded
+   - Claude Code installable with plugin `teamwork-leader` loaded (or stub-equivalent per §methodology-deviations)
 2. T-1-a workflow (`measure-latency.yml`) has produced PASS verdict (at least `macos-14` arm64) — per M-2 gate.
 3. T-1-b (this protocol doc) merged to `feat/v0.1.9-measurement`.
 
@@ -373,6 +373,56 @@ Merge structure in final `docs/archives/measurement.v0.1.9.md`:
 ### Partial-only path (one arch PASS)
 
 If only macos-14 PASS (macos-13 FAIL): final archive doc contains only macos-14 §host-environment subsection, with explicit note: `"macos-13 x86_64: not included — T-1-a FAIL; see x86_64-fallback caveat in measurement.v0.1.9.macos-13.partial.md"`.
+
+---
+
+<!-- ccb: clarify 2026-05-06 — M-2 §methodology-deviations subsection added per Sonnet T-1-c step-review Q3 finding + Opus advisor R2 -->
+
+## §methodology-deviations
+
+> This section is **normative**. It authorizes documented deviations from §prerequisites that preserve T5 signal-path validity. An authorized deviation is one where the substituted mechanism exercises the identical daemon code path as the nominal mechanism, differing only in the environment artifact being substituted.
+
+### deviation-1: stub-based claude binary
+
+**Trigger condition**: The reference host environment (GHA macOS runners) does not have `claude` CLI pre-installed and the tool is not installable within the CI job scope. §prerequisites item 4 ("Claude Code installable with plugin `teamwork-leader` loaded") cannot be satisfied on GHA macOS runners under normal workflow constraints.
+
+**Substitution mechanism**: `tools/claude-stub.sh` — a minimal shell script that sleeps 3 seconds then exits 0 — is placed ahead of the system `$PATH` in the daemon's `EnvironmentVariables.PATH` entry. This path injection is performed post-install via `tools/patch-plist-python3.py`, which rewrites the launchd plist to add the stub directory (e.g., `$HOME/.local/bin`) as the first PATH component. The plist reload (`launchctl bootout` + `launchctl bootstrap`) is performed by the GHA workflow step (`measure-execution.yml`) immediately after `tools/patch-plist-python3.py` rewrites the plist.
+
+**Equivalence justification**: The daemon T5 actor (`daemon.py` function `_run_t5_actor`) invokes `subprocess.Popen(['claude', '--resume', <session_id>, '-p', <prompt>])` then `proc.wait(timeout=2.0)`. When the stub is present: the stub sleeps 3 seconds, causing `proc.wait(timeout=2.0)` to raise `subprocess.TimeoutExpired`. The T5 actor explicitly treats `TimeoutExpired` as a successful spawn (the comment in `daemon.py` L570: "Process still running — treat as success (expected long-lived)"), sets `exit_code = 0`, and proceeds to step (f): `_update_baton_gate_state(baton_path, SESSION_RESUMED)`. The same `TimeoutExpired` path is taken by a real `claude` binary, which would remain running interactively well past the 2-second window. The signal path measured — baton detection → daemon dispatch → `subprocess.Popen` spawn → `SESSION_RESUMED` gate_state write — is structurally identical under both real `claude` and the stub.
+
+**Validity boundary**: Stub-based measurement validates the **plumbing path**: baton detection, daemon dispatch, subprocess spawn initiation, and `SESSION_RESUMED` record write. It does **NOT** validate downstream Claude Code session restoration semantics (i.e., whether `claude --resume` actually restores the prior session context). Full end-to-end validation — confirming that a real Claude Code session resumes correctly — requires a non-stub reference host with `claude` CLI installed and is **OUT-OF-SCOPE for v0.1.9 I-023-M1**. This is deferred to v0.1.10 carry-forward. **Untested branch enumeration (Opus final review R3)**: The stub guarantees the `TimeoutExpired` branch (`daemon.py` L568-571) is hit deterministically; the alternative `CalledProcessError` branch (real `claude` fast non-zero exit triggering T6 retry / potential ABORTED state via `daemon.py` T6 actor) remains untested by this measurement and is part of the v0.1.10 carry-forward end-to-end validation surface.
+
+**Authorization scope**: This deviation is authorized for v0.1.9 I-023-M1 measurement on GHA macOS runners (`macos-14` arm64 primary; `macos-13` x86_64 if triggered). Future measurement protocols that inherit or cite this clause MUST re-evaluate whether the stub-equivalence claim holds for their specific T5 implementation (e.g., if the T5 `proc.wait` timeout value or error-handling logic is changed, the stub sleep duration and the equivalence argument must be re-validated).
+
+**Evidentiary anchor**: `docs/archives/measurement.v0.1.9.md §interpretation` — "Measurement methodology notes" paragraph documents the stub deployment as executed and confirms the `TimeoutExpired` path was the operative mechanism in the v0.1.9 GHA run.
+
+<!-- ccb: clarify 2026-05-06 — M-4 deviation-2 (Gate_Human N/A) added per Opus advisor 2nd consultation R1 BLOCKER -->
+
+### deviation-2: Gate_Human declared N/A for non-interactive evidence
+
+**Trigger condition**: The Stage's evidence surface is non-interactive (workflow run + JSONL data + measurement archive markdown), with NO interactive UI / page / modal / form / button / browser-rendered surface. v0.1.9 I-023-M1 is the canonical example: measurement is GHA-runner-produced raw data + statistical summary + protocol compliance check, none of which involves a user-facing interactive interface. `references/three-gates.md` L136-141 normatively scopes Gate_Human to interactive UI verification via `playwright-cli` / `chrome-devtools-batch-scraper`; absent such surface, the gate is structurally satisfied-by-absence.
+
+**Substitution mechanism**: Gate_Forward (QA PM Sonnet dispatch reading raw JSONL + archive markdown + workflow yml + spec compliance) covers **artifact integrity** in lieu of interactive UI verification. Specifically, Forward gate verifies: (a) JSONL records are well-formed and complete, (b) statistical summary in archive matches raw data, (c) AC verdicts in archive correctly classify against measurement-protocol.v0.1.9.md §acceptance-criteria, (d) workflow yml execution order produces post-patch attribution as documented. These are read-grep-bash verifications — same toolchain Forward uses for code-logic-correctness. The "artifact" being verified IS the user-equivalent surface for non-interactive evidence.
+
+**Validity boundary**: This deviation does **NOT** authorize folding Gate_Human into Gate_Forward when interactive UI **is** in scope. Future stages or charters that produce interactive surfaces (admin pages, web UI, CLI prompts requiring keystroke interaction) MUST run actual Gate_Human via `playwright-cli` / `chrome-devtools-batch-scraper` per three-gates.md normative scope. The deviation is scope-limited to **non-interactive evidence stages** — concretely defined as: dispatch-produced artifacts whose entire user surface is text files (markdown / JSONL / YAML / log) accessible via Read tool.
+
+**Audit-trail discipline**: TeamLead logs Gate_Human verdict object **inline** in PROGRESS.md `## Stage History` (or per-stage gate log) as a distinct verdict object preserving per-gate granularity per three-gates.md §Sequencing under failure. Required form:
+```json
+{
+  "gate": "Gate_Human",
+  "verdict": "PASS",
+  "root_cause": "n/a",
+  "evidence": "N/A — non-interactive evidence; deviation-2 §methodology-deviations",
+  "suggested_owner": "n/a",
+  "dod_status": "met",
+  "non_functional_findings": []
+}
+```
+Folding into Forward's verdict (single combined classifier) is **NOT permitted** — distinct verdict object preserved.
+
+**Authorization scope**: This deviation is authorized for v0.1.9 I-023-M1 **only**. Future measurement protocols inheriting or citing this clause MUST re-evaluate whether the non-interactive-evidence claim holds for their specific evidence surface (e.g., if a future charter measures an admin dashboard page render time, Gate_Human becomes load-bearing again and deviation-2 does NOT transfer).
+
+**Evidentiary anchor**: `references/three-gates.md` §Gate_Human L136-141 normatively scopes the gate to interactive verification; this deviation declares structural absence rather than reinterpreting scope. Cross-reference: `agents/qa-pm.md` L57-68 for QA PM's tool ownership of `playwright-cli` / `chrome-devtools-batch-scraper`.
 
 ---
 
