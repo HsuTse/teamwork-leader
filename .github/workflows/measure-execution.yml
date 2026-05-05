@@ -1,7 +1,6 @@
 name: measure-execution — I-023-M1 baton-write→SESSION_RESUMED latency
 
-# T-1-c measurement workflow. Workflow dispatch only (no push trigger) to
-# avoid runaway billing. Measures wall-clock latency from baton-write to
+# T-1-c measurement workflow. Measures wall-clock latency from baton-write to
 # SESSION_RESUMED for both cold-start and warm-start cycles on macos-14 (arm64
 # PRIMARY only; x86_64 deferred to v0.1.10 per V19-I-7 GHA capacity
 # exhaustion).
@@ -14,6 +13,11 @@ name: measure-execution — I-023-M1 baton-write→SESSION_RESUMED latency
 # times out (treating it as a successful long-lived process).
 
 on:
+  # workflow_dispatch requires the workflow to exist on the default branch (main).
+  # Since this workflow is on feat/v0.1.9-measurement only, we also add a scoped
+  # push trigger as fallback execution path. The push trigger is constrained to
+  # the feature branch to limit billing exposure. Once results are collected,
+  # this workflow is archived (not merged to main as a recurring trigger).
   workflow_dispatch:
     inputs:
       n_iterations:
@@ -21,6 +25,9 @@ on:
         required: false
         default: '10'
         type: string
+  push:
+    branches:
+      - feat/v0.1.9-measurement
 
 jobs:
   measure-macos-14:
