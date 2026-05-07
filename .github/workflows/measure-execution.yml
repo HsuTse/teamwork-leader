@@ -1,0 +1,582 @@
+name: measure-execution — I-023-M1 baton-write→SESSION_RESUMED latency
+
+# T-1-c measurement workflow. Measures wall-clock latency from baton-write to
+# SESSION_RESUMED for both cold-start and warm-start cycles on macos-14 (arm64
+# PRIMARY only; x86_64 deferred to v0.1.10 per V19-I-7 GHA capacity
+# exhaustion).
+#
+# Architecture note: GHA runners do not have claude CLI installed. A stub
+# claude script (tools/claude-stub.sh, exits 0 after 3s sleep) is placed
+# ahead of the system PATH so daemon.py T5 can complete the
+# BATON_WRITTEN -> SESSION_RESUMED transition without hitting T6 retry
+# exhaustion. The stub sleep(3) ensures daemon.py's 2s wait(timeout=2.0)
+# times out (TimeoutExpired → exit_code=0 → spawn_succeeded=True).
+#
+# Helper scripts (in tools/):
+#   tools/measure-write-baton.py      — writes synthetic 7-field baton, prints T0
+#   tools/measure-poll-resumed.py     — polls baton until SESSION_RESUMED
+#   tools/measure-compute-stats.py    — computes p50/p95/max per §statistics-computation
+
+on:
+  # workflow_dispatch requires the workflow on the default branch for API dispatch.
+  # Push trigger scoped to feature branch enables execution during development.
+  workflow_dispatch:
+    inputs:
+      n_iterations:
+        description: 'Number of iterations per type (cold + warm, minimum 10)'
+        required: false
+        default: '10'
+        type: string
+  push:
+    branches:
+      - feat/v0.1.9-measurement
+
+jobs:
+  measure-macos-14:
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    env:
+      # V19-I-6 fix: use github.workspace-derived paths, NOT runner.temp
+      CLAUDE_PLUGIN_ROOT: ${{ github.workspace }}
+      CLAUDE_PROJECT_DIR: ${{ github.workspace }}/.teamlead-project
+      PLIST_LABEL: com.teamwork-leader.auto-resume-daemon
+      PLIST_FILENAME: com.teamwork-leader.auto-resume-daemon.plist
+      # Sanitize n_iterations to env var to prevent injection; default 10
+      N_ITERATIONS: ${{ inputs.n_iterations || '10' }}
+
+    steps:
+      # ── Checkout ─────────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # ── Environment setup ─────────────────────────────────────────────────────
+      - name: Create .teamlead workspace directory
+        run: mkdir -p "$CLAUDE_PROJECT_DIR/.teamlead"
+
+      - name: Confirm prerequisites
+        run: |
+          echo "=== Python version ==="
+          python3 --version
+          echo "=== launchctl availability ==="
+          which launchctl
+          launchctl version
+          echo "=== CLAUDE_PLUGIN_ROOT ==="
+          echo "$CLAUDE_PLUGIN_ROOT"
+          echo "=== CLAUDE_PROJECT_DIR ==="
+          echo "$CLAUDE_PROJECT_DIR"
+          ls "$CLAUDE_PROJECT_DIR/.teamlead/" 2>/dev/null || echo ".teamlead dir absent — expected for cold-start"
+
+      # ── Stub claude binary (enables SESSION_RESUMED on GHA without real claude CLI) ──
+      - name: Install stub claude binary
+        run: |
+          STUB_DIR="$HOME/.local/bin"
+          mkdir -p "$STUB_DIR"
+          cp tools/claude-stub.sh "$STUB_DIR/claude"
+          chmod +x "$STUB_DIR/claude"
+          echo "$STUB_DIR" >> "$GITHUB_PATH"
+          # Also expose STUB_DIR for plist PATH injection (launchd does not inherit
+          # the shell PATH; the stub must be explicitly added to the plist env).
+          echo "STUB_DIR=$STUB_DIR" >> "$GITHUB_ENV"
+          echo "Stub claude installed at $STUB_DIR/claude"
+
+      # ── Capture GHA python3 path for plist patching ─────────────────────────────
+      # Two launchd environment problems patched by tools/patch-plist-python3.py:
+      # (1) Python version: launchd resolves python3 to system Python 3.9 (macOS 14);
+      #     daemon.py requires Python 3.10+ for list[str]|None syntax. Fix: replace
+      #     /usr/bin/env+python3 in ProgramArguments with the absolute GHA python3 path.
+      # (2) claude stub visibility: stub is in $HOME/.local/bin which is not in
+      #     launchd's default PATH. Fix: inject PATH into plist EnvironmentVariables.
+      - name: Capture GHA python3 path
+        id: python3_path
+        run: |
+          PYTHON3_PATH=$(which python3)
+          echo "PYTHON3_PATH=$PYTHON3_PATH" >> "$GITHUB_ENV"
+          echo "python3_path=$PYTHON3_PATH" >> "$GITHUB_OUTPUT"
+          echo "GHA python3 path: $PYTHON3_PATH"
+          "$PYTHON3_PATH" --version
+
+      - name: Verify stub claude is on PATH
+        run: |
+          which claude
+          echo "stub verified: $(which claude)"
+
+      # ── Capture host environment (AC-4) ───────────────────────────────────────
+      - name: Capture host environment (AC-4)
+        run: |
+          python3 - << 'PYEOF'
+          import json, subprocess, sys, os
+
+          os_info = subprocess.run(["sw_vers"], capture_output=True, text=True).stdout.strip()
+          pv = ""
+          for line in os_info.splitlines():
+              if "ProductVersion" in line:
+                  pv = line.split(":", 1)[1].strip()
+          os_name = f"macOS {pv} (Sonoma)" if pv.startswith("14") else f"macOS {pv}"
+
+          arch_raw = subprocess.run(["uname", "-m"], capture_output=True, text=True).stdout.strip()
+          launchctl_path = subprocess.run(["which", "launchctl"], capture_output=True, text=True).stdout.strip()
+          plist_install_path = os.path.expanduser("~/Library/LaunchAgents/com.teamwork-leader.auto-resume-daemon.plist")
+
+          plugin_root = os.environ.get("CLAUDE_PLUGIN_ROOT", "")
+          hook_chain = []
+          hooks_dir = os.path.join(plugin_root, "hooks")
+          if os.path.isdir(hooks_dir):
+              for f in sorted(os.listdir(hooks_dir)):
+                  fp = os.path.join(hooks_dir, f)
+                  if os.path.isfile(fp):
+                      hook_chain.append({"file": f, "path": fp})
+
+          host_env = {
+              "os": os_name,
+              "arch": arch_raw,
+              "launchctl_bootstrap_path": launchctl_path,
+              "hook_chain": hook_chain,
+              "plist_install_path": plist_install_path,
+              "runner_info": {"gha_runner_label": "macos-14", "gha_runner_arch": "ARM64"},
+              "measurement_note": (
+                  "claude CLI not installed on GHA; stub (tools/claude-stub.sh: "
+                  "sleeps 3s then exits 0) placed ahead of PATH to enable T5 "
+                  "SESSION_RESUMED transition without T6 retry exhaustion."
+              ),
+          }
+
+          out_path = os.path.join(os.environ["CLAUDE_PROJECT_DIR"], ".teamlead", "host_env.json")
+          with open(out_path, "w") as f:
+              json.dump(host_env, f, indent=2)
+          print(f"host_env.json written: {out_path}")
+          print(json.dumps(host_env, indent=2))
+          PYEOF
+
+      # ── COLD-START measurement loop ───────────────────────────────────────────
+      - name: Cold-start measurement loop
+        id: cold_loop
+        run: |
+          set -euo pipefail
+
+          # Sanitize n_iterations: must be positive integer >= 10
+          N_ITER="$N_ITERATIONS"
+          if ! [[ "$N_ITER" =~ ^[0-9]+$ ]]; then
+            echo "WARNING: N_ITERATIONS='$N_ITER' is not a positive integer; defaulting to 10"
+            N_ITER=10
+          fi
+          if [ "$N_ITER" -lt 10 ]; then
+            echo "WARNING: N_ITERATIONS=$N_ITER < 10; enforcing minimum N=10"
+            N_ITER=10
+          fi
+          echo "Running $N_ITER cold-start iterations"
+
+          BATON_PATH="$CLAUDE_PROJECT_DIR/.teamlead/baton.json"
+          PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_FILENAME"
+          COLD_JSONL="$CLAUDE_PROJECT_DIR/.teamlead/cold_runs.jsonl"
+          rm -f "$COLD_JSONL"
+          touch "$COLD_JSONL"
+
+          COLD_COMPLETED=0
+          COLD_FAILED=0
+
+          for i in $(seq 1 "$N_ITER"); do
+            echo ""
+            echo "--- Cold-start run $i / $N_ITER ---"
+
+            # C-1: Ensure clean state (no plist, no baton)
+            if [ -f "$PLIST_PATH" ]; then
+              echo "  [C-1] Plist present — uninstalling..."
+              python3 scripts/install.py --uninstall 2>&1 || true
+              sleep 3
+            fi
+            if [ -f "$PLIST_PATH" ]; then
+              echo "  [C-1] FAIL: plist still present after uninstall — skipping run"
+              COLD_FAILED=$((COLD_FAILED + 1))
+              continue
+            fi
+            rm -f "$BATON_PATH"
+            echo "  [C-1] Clean state confirmed"
+
+            # C-2: Write baton (T0) — this is the measurement start anchor
+            echo "  [C-2] Writing measurement baton (T0)..."
+            BATON_WRITE_TS=$(python3 tools/measure-write-baton.py "$BATON_PATH")
+            echo "  [C-2] T0=$BATON_WRITE_TS"
+
+            # C-3: Install daemon (cold install — launchd bootstraps and watches dir)
+            echo "  [C-3] Installing daemon (cold install)..."
+            INSTALL_LOG="/tmp/install-cold-run-${i}.txt"
+            set +e
+            python3 scripts/install.py 2>&1 | tee "$INSTALL_LOG"
+            set -e
+
+            STDOUT_DEGRADED=0
+            STATE_DEGRADED=0
+            if grep -q "MANUAL INSTALLATION REQUIRED" "$INSTALL_LOG"; then
+              STDOUT_DEGRADED=1
+            fi
+            STATE_FILE="$CLAUDE_PROJECT_DIR/.teamlead/install-state.json"
+            if [ -f "$STATE_FILE" ]; then
+              STATUS=$(python3 -c "import json; print(json.load(open('$STATE_FILE')).get('status','unknown'))" 2>/dev/null || echo "unknown")
+              if [ "$STATUS" = "manual-pending" ]; then
+                STATE_DEGRADED=1
+              fi
+            fi
+
+            if [ "$STDOUT_DEGRADED" -eq 1 ] || [ "$STATE_DEGRADED" -eq 1 ]; then
+              echo "  [C-3] FAIL: install degraded (stdout_degraded=$STDOUT_DEGRADED state_degraded=$STATE_DEGRADED)"
+              COLD_FAILED=$((COLD_FAILED + 1))
+              continue
+            fi
+
+            # C-3b: Patch plist to use GHA python3 (not system python3 3.9)
+            # daemon.py uses list[str]|None syntax (Python 3.10+); system python3 on
+            # macOS 14 is 3.9 and crashes at import time. tools/patch-plist-python3.py
+            # replaces /usr/bin/env+python3 with the absolute GHA python3 path, then
+            # we reload launchd so the patched plist takes effect.
+            echo "  [C-3b] Patching plist: python3=$PYTHON3_PATH stub_dir=$STUB_DIR"
+            python3 tools/patch-plist-python3.py "$PLIST_PATH" "$PYTHON3_PATH" "$STUB_DIR"
+
+            # Reload launchd with patched plist
+            echo "  [C-3b] Reloading launchd with patched plist..."
+            UID_VAL=$(id -u)
+            launchctl bootout "gui/$UID_VAL" "$PLIST_PATH" 2>/dev/null || true
+            sleep 2
+            launchctl bootstrap "gui/$UID_VAL" "$PLIST_PATH"
+            echo "  [C-3b] Plist patched and reloaded"
+
+            echo "  [C-3] Install PASS"
+
+            # C-4: Poll for SESSION_RESUMED
+            # ThrottleInterval=10s + poll cycle 5s + T5 processing (~3s stub) = expect ~18s max
+            echo "  [C-4] Polling for SESSION_RESUMED (timeout 90s)..."
+            RUN_ID="cold-$(printf '%03d' "$i")"
+            set +e
+            RESULT_JSON=$(python3 tools/measure-poll-resumed.py "$BATON_PATH" "$BATON_WRITE_TS" "$RUN_ID" "cold" 90)
+            POLL_EXIT=$?
+            set -e
+
+            if [ "$POLL_EXIT" -ne 0 ]; then
+              echo "  [C-4] FAIL: SESSION_RESUMED not reached"
+              FINAL_GS=$(echo "$RESULT_JSON" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()).get('gate_state_final','unknown'))" 2>/dev/null || echo "unknown")
+              echo "  gate_state_final=$FINAL_GS"
+              COLD_FAILED=$((COLD_FAILED + 1))
+              python3 scripts/install.py --uninstall 2>/dev/null || true
+              sleep 5
+              continue
+            fi
+
+            # C-5: Record result
+            echo "$RESULT_JSON" >> "$COLD_JSONL"
+            LATENCY=$(echo "$RESULT_JSON" | python3 -c "import json,sys; print(json.loads(sys.stdin.read())['latency_s'])")
+            echo "  [C-5] run=$i type=cold latency_s=$LATENCY"
+            COLD_COMPLETED=$((COLD_COMPLETED + 1))
+
+            # C-6: Uninstall + settle
+            echo "  [C-6] Uninstalling + settling 5s..."
+            python3 scripts/install.py --uninstall 2>/dev/null || true
+            sleep 5
+          done
+
+          echo ""
+          echo "=== Cold-start results ==="
+          echo "  Completed: $COLD_COMPLETED"
+          echo "  Failed: $COLD_FAILED"
+
+          if [ "$COLD_COMPLETED" -lt 10 ]; then
+            echo "  AC-1: FAIL (completed=$COLD_COMPLETED < 10)"
+            echo "cold_ac1=FAIL" >> "$GITHUB_OUTPUT"
+          else
+            echo "  AC-1: PASS (completed=$COLD_COMPLETED >= 10)"
+            echo "cold_ac1=PASS" >> "$GITHUB_OUTPUT"
+          fi
+          echo "cold_completed=$COLD_COMPLETED" >> "$GITHUB_OUTPUT"
+
+      # ── WARM-START baseline install ────────────────────────────────────────────
+      - name: Warm-start baseline install
+        id: warm_install
+        run: |
+          set -euo pipefail
+          echo "Installing daemon for warm-start baseline..."
+          set +e
+          python3 scripts/install.py 2>&1 | tee /tmp/install-warm-baseline.txt
+          set -e
+
+          STDOUT_DEGRADED=0
+          STATE_DEGRADED=0
+          if grep -q "MANUAL INSTALLATION REQUIRED" /tmp/install-warm-baseline.txt; then
+            STDOUT_DEGRADED=1
+          fi
+          STATE_FILE="$CLAUDE_PROJECT_DIR/.teamlead/install-state.json"
+          if [ -f "$STATE_FILE" ]; then
+            STATUS=$(python3 -c "import json; print(json.load(open('$STATE_FILE')).get('status','unknown'))" 2>/dev/null || echo "unknown")
+            if [ "$STATUS" = "manual-pending" ]; then
+              STATE_DEGRADED=1
+            fi
+          fi
+
+          if [ "$STDOUT_DEGRADED" -eq 1 ] || [ "$STATE_DEGRADED" -eq 1 ]; then
+            echo "Warm baseline install FAIL"
+            echo "warm_baseline=FAIL" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          # Patch plist to use GHA python3 (not system python3 3.9)
+          PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_FILENAME"
+          echo "Patching plist: python3=$PYTHON3_PATH stub_dir=$STUB_DIR"
+          python3 tools/patch-plist-python3.py "$PLIST_PATH" "$PYTHON3_PATH" "$STUB_DIR"
+
+          # Reload launchd with patched plist
+          UID_VAL=$(id -u)
+          launchctl bootout "gui/$UID_VAL" "$PLIST_PATH" 2>/dev/null || true
+          sleep 2
+          launchctl bootstrap "gui/$UID_VAL" "$PLIST_PATH"
+          echo "Plist patched and reloaded"
+
+          echo "Warm baseline install PASS"
+          echo "warm_baseline=PASS" >> "$GITHUB_OUTPUT"
+          # Allow daemon to stabilize before warm-start loop
+          sleep 10
+
+      # ── WARM-START measurement loop ───────────────────────────────────────────
+      - name: Warm-start measurement loop
+        id: warm_loop
+        run: |
+          set -euo pipefail
+
+          N_ITER="$N_ITERATIONS"
+          if ! [[ "$N_ITER" =~ ^[0-9]+$ ]]; then
+            N_ITER=10
+          fi
+          if [ "$N_ITER" -lt 10 ]; then
+            N_ITER=10
+          fi
+          echo "Running $N_ITER warm-start iterations"
+
+          BATON_PATH="$CLAUDE_PROJECT_DIR/.teamlead/baton.json"
+          PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_FILENAME"
+          WARM_JSONL="$CLAUDE_PROJECT_DIR/.teamlead/warm_runs.jsonl"
+          rm -f "$WARM_JSONL"
+          touch "$WARM_JSONL"
+
+          WARM_COMPLETED=0
+          WARM_FAILED=0
+
+          for j in $(seq 1 "$N_ITER"); do
+            echo ""
+            echo "--- Warm-start run $j / $N_ITER ---"
+
+            # W-1: Confirm plist present + daemon listed
+            if [ ! -f "$PLIST_PATH" ]; then
+              echo "  [W-1] FAIL: plist absent — not warm-start"
+              WARM_FAILED=$((WARM_FAILED + 1))
+              continue
+            fi
+            DAEMON_LISTED=$(launchctl list | grep "$PLIST_LABEL" || echo "")
+            if [ -z "$DAEMON_LISTED" ]; then
+              echo "  [W-1] FAIL: daemon not in launchctl list"
+              WARM_FAILED=$((WARM_FAILED + 1))
+              continue
+            fi
+            echo "  [W-1] Warm precondition OK"
+
+            # Allow previous run's baton state to clear before writing new one
+            rm -f "$BATON_PATH"
+            sleep 2
+
+            # W-2: Write baton (T0)
+            echo "  [W-2] Writing measurement baton (T0)..."
+            BATON_WRITE_TS=$(python3 tools/measure-write-baton.py "$BATON_PATH")
+            echo "  [W-2] T0=$BATON_WRITE_TS"
+
+            # W-3: Poll for SESSION_RESUMED (warm: no launchd spin-up, faster)
+            echo "  [W-3] Polling for SESSION_RESUMED (timeout 60s)..."
+            RUN_ID="warm-$(printf '%03d' "$j")"
+            set +e
+            RESULT_JSON=$(python3 tools/measure-poll-resumed.py "$BATON_PATH" "$BATON_WRITE_TS" "$RUN_ID" "warm" 60)
+            POLL_EXIT=$?
+            set -e
+
+            if [ "$POLL_EXIT" -ne 0 ]; then
+              echo "  [W-3] FAIL: SESSION_RESUMED not reached"
+              FINAL_GS=$(echo "$RESULT_JSON" | python3 -c "import json,sys; print(json.loads(sys.stdin.read()).get('gate_state_final','unknown'))" 2>/dev/null || echo "unknown")
+              echo "  gate_state_final=$FINAL_GS"
+              WARM_FAILED=$((WARM_FAILED + 1))
+              sleep 5
+              continue
+            fi
+
+            # W-4: Record result
+            echo "$RESULT_JSON" >> "$WARM_JSONL"
+            LATENCY=$(echo "$RESULT_JSON" | python3 -c "import json,sys; print(json.loads(sys.stdin.read())['latency_s'])")
+            echo "  [W-4] run=$j type=warm latency_s=$LATENCY"
+            WARM_COMPLETED=$((WARM_COMPLETED + 1))
+
+            # W-5: Settle (do NOT uninstall between warm runs)
+            echo "  [W-5] Settling 5s..."
+            sleep 5
+          done
+
+          echo ""
+          echo "=== Warm-start results ==="
+          echo "  Completed: $WARM_COMPLETED"
+          echo "  Failed: $WARM_FAILED"
+
+          if [ "$WARM_COMPLETED" -lt 10 ]; then
+            echo "  AC-1: FAIL (completed=$WARM_COMPLETED < 10)"
+            echo "warm_ac1=FAIL" >> "$GITHUB_OUTPUT"
+          else
+            echo "  AC-1: PASS (completed=$WARM_COMPLETED >= 10)"
+            echo "warm_ac1=PASS" >> "$GITHUB_OUTPUT"
+          fi
+          echo "warm_completed=$WARM_COMPLETED" >> "$GITHUB_OUTPUT"
+
+      # ── Statistics computation ────────────────────────────────────────────────
+      - name: Compute statistics
+        id: stats
+        if: always()
+        run: |
+          set -euo pipefail
+
+          COLD_JSONL="$CLAUDE_PROJECT_DIR/.teamlead/cold_runs.jsonl"
+          WARM_JSONL="$CLAUDE_PROJECT_DIR/.teamlead/warm_runs.jsonl"
+
+          echo "=== Cold-start statistics ==="
+          if [ -f "$COLD_JSONL" ] && [ -s "$COLD_JSONL" ]; then
+            COLD_STATS=$(python3 tools/measure-compute-stats.py "$COLD_JSONL")
+          else
+            COLD_STATS='{"error": "no cold runs or empty file", "n": 0}'
+          fi
+          echo "$COLD_STATS"
+
+          echo ""
+          echo "=== Warm-start statistics ==="
+          if [ -f "$WARM_JSONL" ] && [ -s "$WARM_JSONL" ]; then
+            WARM_STATS=$(python3 tools/measure-compute-stats.py "$WARM_JSONL")
+          else
+            WARM_STATS='{"error": "no warm runs or empty file", "n": 0}'
+          fi
+          echo "$WARM_STATS"
+
+          # Write combined statistics JSON for archive
+          python3 - "$COLD_STATS" "$WARM_STATS" << 'PYEOF'
+          import json, os, sys
+          cold_stats = json.loads(sys.argv[1])
+          warm_stats = json.loads(sys.argv[2])
+          combined = {"cold": cold_stats, "warm": warm_stats}
+          out_path = os.path.join(os.environ["CLAUDE_PROJECT_DIR"], ".teamlead", "statistics.json")
+          with open(out_path, "w") as f:
+              json.dump(combined, f, indent=2)
+          print(f"statistics.json written: {out_path}")
+          PYEOF
+
+          # Extract AC-2 verdicts
+          COLD_AC2=$(echo "$COLD_STATS" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); print(d.get('ac2_verdict','FAIL'))" 2>/dev/null || echo "FAIL")
+          WARM_AC2=$(echo "$WARM_STATS" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); print(d.get('ac2_verdict','FAIL'))" 2>/dev/null || echo "FAIL")
+
+          echo ""
+          echo "=== AC verdicts ==="
+          echo "  Cold AC-2: $COLD_AC2"
+          echo "  Warm AC-2: $WARM_AC2"
+
+          if [ "$COLD_AC2" = "PASS" ] && [ "$WARM_AC2" = "PASS" ]; then
+            AC3="PASS"
+          else
+            AC3="FAIL"
+          fi
+          echo "  AC-3: $AC3"
+
+          echo "cold_ac2=$COLD_AC2" >> "$GITHUB_OUTPUT"
+          echo "warm_ac2=$WARM_AC2" >> "$GITHUB_OUTPUT"
+          echo "ac3=$AC3" >> "$GITHUB_OUTPUT"
+
+      # ── GHA step summary ─────────────────────────────────────────────────────
+      - name: Emit step summary
+        if: always()
+        run: |
+          python3 - << 'PYEOF'
+          import json, os
+
+          stats_path = os.path.join(os.environ["CLAUDE_PROJECT_DIR"], ".teamlead", "statistics.json")
+          summary_path = os.environ.get("GITHUB_STEP_SUMMARY", "/dev/stdout")
+
+          lines = [
+              "## Measurement Results — I-023-M1 v0.1.9",
+              "",
+              f"- Runner: macos-14 arm64",
+              f"- Run ID: {os.environ.get('GITHUB_RUN_ID', 'unknown')}",
+              "",
+          ]
+
+          try:
+              with open(stats_path) as f:
+                  stats = json.load(f)
+
+              for label, key in [("Cold-start", "cold"), ("Warm-start", "warm")]:
+                  lines.append(f"### {label}")
+                  d = stats.get(key, {})
+                  if "error" not in d:
+                      lines.append("| N | p50 (s) | p95 (s) | max (s) | AC-2 |")
+                      lines.append("|---|---------|---------|---------|------|")
+                      lines.append(f"| {d['n']} | {d['p50_s']} | {d['p95_s']} | {d['max_s']} | {d['ac2_verdict']} |")
+                      lines.append("_Note: p95 = max at N=10 (§statistics-computation degeneracy clause)._")
+                  else:
+                      lines.append(f"Error: {d.get('error', 'unknown')}")
+                  lines.append("")
+          except (FileNotFoundError, json.JSONDecodeError) as e:
+              lines.append(f"Statistics not available: {e}")
+
+          with open(summary_path, "a") as f:
+              f.write("\n".join(lines) + "\n")
+          print("Step summary written.")
+          PYEOF
+
+      # ── Collect and upload artifacts ─────────────────────────────────────────
+      - name: Collect measurement artifacts
+        if: always()
+        run: |
+          ARTIFACT_DIR="$CLAUDE_PROJECT_DIR/.teamlead/artifact-collect"
+          mkdir -p "$ARTIFACT_DIR"
+
+          cp "$CLAUDE_PROJECT_DIR/.teamlead/cold_runs.jsonl" "$ARTIFACT_DIR/" 2>/dev/null || touch "$ARTIFACT_DIR/cold_runs.jsonl"
+          cp "$CLAUDE_PROJECT_DIR/.teamlead/warm_runs.jsonl" "$ARTIFACT_DIR/" 2>/dev/null || touch "$ARTIFACT_DIR/warm_runs.jsonl"
+
+          # Combined raw datapoints file (per Deliverable 2 spec)
+          cat "$ARTIFACT_DIR/cold_runs.jsonl" "$ARTIFACT_DIR/warm_runs.jsonl" > "$ARTIFACT_DIR/measurement-raw-macos-14.jsonl"
+
+          cp "$CLAUDE_PROJECT_DIR/.teamlead/host_env.json" "$ARTIFACT_DIR/" 2>/dev/null || true
+          cp "$CLAUDE_PROJECT_DIR/.teamlead/statistics.json" "$ARTIFACT_DIR/" 2>/dev/null || true
+          cp /tmp/install-cold-run-*.txt "$ARTIFACT_DIR/" 2>/dev/null || true
+          cp /tmp/install-warm-baseline.txt "$ARTIFACT_DIR/" 2>/dev/null || true
+          cp "$CLAUDE_PROJECT_DIR/.teamlead/daemon.out" "$ARTIFACT_DIR/" 2>/dev/null || true
+          cp "$CLAUDE_PROJECT_DIR/.teamlead/daemon.err" "$ARTIFACT_DIR/" 2>/dev/null || true
+
+          echo "=== Artifact directory ==="
+          ls -lh "$ARTIFACT_DIR/"
+
+          echo ""
+          echo "=== Datapoints count validation ==="
+          COLD_COUNT=$(grep -c '"type": "cold"' "$ARTIFACT_DIR/cold_runs.jsonl" 2>/dev/null || echo 0)
+          WARM_COUNT=$(grep -c '"type": "warm"' "$ARTIFACT_DIR/warm_runs.jsonl" 2>/dev/null || echo 0)
+          echo "Cold datapoints: $COLD_COUNT (AC-1 requirement: >= 10)"
+          echo "Warm datapoints: $WARM_COUNT (AC-1 requirement: >= 10)"
+          if [ "$COLD_COUNT" -ge 10 ] && [ "$WARM_COUNT" -ge 10 ]; then
+            echo "AC-1: PASS"
+          else
+            echo "AC-1: FAIL (cold=$COLD_COUNT warm=$WARM_COUNT)"
+          fi
+
+      - name: Upload measurement artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: measurement-raw-macos-14
+          path: ${{ env.CLAUDE_PROJECT_DIR }}/.teamlead/artifact-collect/
+          retention-days: 90
+
+      # ── Cleanup ───────────────────────────────────────────────────────────────
+      - name: Cleanup — bootout daemon
+        if: always()
+        run: |
+          python3 scripts/install.py --uninstall 2>/dev/null || true
+          echo "Cleanup complete."

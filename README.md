@@ -102,8 +102,7 @@ Plugin-self-contained AutoCompact resilience — 補完 cross-session resume 自
 
 **design.md FROZEN spec**：7 acceptance criteria (AC-4-A..G) + 7 cross-script integration invariants (CI-1..CI-7：baton polling / gate.lock subprocess / resume invocation / notifier subprocess / no module imports / hooks FROZEN / check-cross-refs.sh extension)。
 
-**已知量測缺口（v0.1.7 → v0.1.9 shipping constraint）**：v0.1.7 以 degraded-mode acceptance (d) 出貨，本機 bash-hook + launchctl-guard 結構性阻擋 launchctl bootstrap，導致 `baton-write→SESSION_RESUMED ≤30s` 主要 KPI 在真實 launchd 環境**從未量測**。對使用者影響：daemon 程式碼路徑經 synthetic 驗證但未經整合面確認；guarded host 用戶會落入 degraded-mode（Layer 2 manual install），non-guarded host 用戶**理論上**可獲得真實 auto-resume 但本團隊截至 v0.1.7 並未確認。
-v0.1.9 charter 必須先建立 non-guarded reference host（實體 Mac 或 cloud macOS runner），執行 `tools/measure-latency.sh --daemon-present` 取得 p50/p95/max 數據，確認 ≤30s 後才能移除本警語。詳見 [`docs/specs/auto-resume-daemon-design.md §7`](./docs/specs/auto-resume-daemon-design.md) 與 [`docs/archives/lessons-learned.v0.1.7.md`](./docs/archives/lessons-learned.v0.1.7.md) §L-1 / §L-3。
+**量測已完成（v0.1.9）**：v0.1.9 charter 在 GitHub Actions macOS runner（macos-14 arm64）非 guarded host 上執行 I-023-M1 測量；**cold-start p50=15.5s / p95=15.9s / max=15.9s** 與 **warm-start p50=5.3s / p95=5.8s / max=5.8s**（N=10 per arm）— 三個統計值皆 ≤30s ship gate。詳見 [`docs/archives/measurement.v0.1.9.md`](./docs/archives/measurement.v0.1.9.md)；方法論偏差登記於 [`docs/specs/measurement-protocol.v0.1.9.md §methodology-deviations`](./docs/specs/measurement-protocol.v0.1.9.md)；shipping constraint 全文（含 v0.1.9 measurement closure term (e)）見 [`docs/specs/auto-resume-daemon-design.md §7`](./docs/specs/auto-resume-daemon-design.md)。
 
 詳見 `docs/specs/auto-resume-daemon-design.md` (FROZEN 設計文件) 與 `docs/specs/phase-4-evidence/stage-4-close-report.txt` (close report v2 post-Opus-revisions)。
 
