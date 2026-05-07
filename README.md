@@ -2,7 +2,7 @@
 
 > 多 agent PMP 專案編排：TeamLead 統籌 PO/RD/QA/UX/Ad-hoc 角色 PM，透過 stage-gated 流程與三道驗證閘執行專案。
 
-[![version](https://img.shields.io/badge/version-0.1.8-blue.svg)](./.claude-plugin/plugin.json)
+[![version](https://img.shields.io/badge/version-0.1.9-blue.svg)](./.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 ---
@@ -223,17 +223,20 @@ teamwork-leader/
 
 ## 狀態與限制
 
-**Dogfood 進度**（2026-05-02）：
+**Charter 完成記錄**：
 
-- **初次 dogfood 完成**：BeiliSystem PR #30/#34（3 stages, 25 dispatches, 5 real defects caught, 0 false positives）
-- **Validation prereq**：4/4 PASS（`verification_self_redundancy` 8 distinct values；`divergence_score` 0=4%；`expected_scope_files`/`expected_raid_delta` 填寫率 100%；pre-task estimates 1:1 對應）
-- **N1+KMR mechanism instrumented**：trust_tier 全 PMs 仍 `standard`；KMR proxy max observed 2.0（threshold 4，headroom 2.0）；`kmr_fired=true` count 0/25
+- **v0.1.6 Rule 7 ship**（self-dogfood）— PLAN_AUDIT anti-self-skip enforcement，自指 Opus dogfood 驗證
+- **v0.1.7 Auto-Resume Daemon**（multi-charter）— Phase 1+2 daemon ship；degraded-mode acceptance (d) close（I-023-M1 measurement deferred to v0.1.9）
+- **v0.1.8 measurement-deferral codification**（doc-only）— design.md §7 (a)–(d) shipping constraint codified；anti-scope-creep mandate held end-to-end
+- **v0.1.9 I-023-M1 measurement closure**（self-dogfood）— GHA macos-14 arm64 cold p50=15.5s / warm p50=5.3s（≤30s ship gate satisfied）；FROZEN spec held end-to-end；M-2/M-4 deviation registration discipline；2× mid-stage Opus advisor pattern
+- **首次外部 dogfood**：BeiliSystem PR #30/#34（3 stages, 25 dispatches, 5 real defects caught, 0 false positives, 2026-05-02）
 
 **仍待強化**：
 
 - **多 project 校準**：thresholds 仍是 seed values，需 ≥2 unrelated projects evidence 才能進 Phase 4 CGR threshold calibration
 - **N≥2 hard gate**：`long-batched-dispatch-warning`（v0.2.0 候選）僅 1 truncation case，必須 N≥2 才能 ship interruptive guard
 - **CGR（Calibration Governance Review）pending**：需 ≥3 stages clean data after v0.1.3 才啟動 round 1
+- **v0.1.10 carry-forward**：I-061/I-064/I-065/I-071 daemon FROZEN spec changes + 4 polish + V19-I-7 macos-13 retry + 3 Gate_Requirement reliability findings + RAID-I-SCHEMA-1 (PO meta schema) + RAID-I-2 (protocol-vs-workflow timeout text gap)
 
 ## 文件導引
 
@@ -257,9 +260,14 @@ MIT — 見 [LICENSE](./LICENSE)。
 
 ## Roadmap
 
-- [x] 初次 dogfood 完成（BeiliSystem PR #30/#34, 3 stages / 25 dispatches, 2026-05-02）
+- [x] 初次外部 dogfood 完成（BeiliSystem PR #30/#34, 3 stages / 25 dispatches, 2026-05-02）
 - [x] 確認 `verification_self_redundancy` variance（8 distinct values 0–9, dominant `3` 占 48%）
 - [x] v0.1.3 schema validation enforcement ship（dogfood 觀察到 12% incomplete → 強化 audit-trail logging + retry pool 隔離）
+- [x] v0.1.6 Rule 7 anti-self-skip ship（self-dogfood）
+- [x] v0.1.7 Auto-Resume Daemon Phase 1+2 ship（degraded-mode acceptance (d)）
+- [x] v0.1.8 measurement-deferral 形式化（design.md §7 (a)–(d) codification）
+- [x] **v0.1.9 I-023-M1 measurement closure**（GHA macos-14 cold p50=15.5s / warm p50=5.3s ≤30s ship gate）
+- [ ] v0.1.10 daemon FROZEN-spec changes（I-061/I-064/I-065/I-071）+ polish + macos-13 retry
 - [ ] 收集 ≥2 unrelated projects' evidence → Phase 4 CGR round 1（threshold 校準）
 - [ ] 達 N≥2 hard gate 後評估 v0.2.0 long-batched dispatch interruptive guard
 - [ ] 視需要加入 PM-side adaptive verification depth（目前 sampling 全由 TeamLead 決定）
