@@ -931,6 +931,8 @@ The following four terms collectively define the v0.1.7 → v0.1.9 measurement d
 
 **(d) Acceptance (d) degraded-mode close path is the v0.1.7 ship rationale.** The Stage 4 gate closure was authorized under acceptance path (d) as defined in the Stage 4 PLANNING charter: "degraded-mode install verified (Layer 2 manual path documented; install-state.json status=manual-pending)." This means v0.1.7 is valid for distribution to users whose hosts are similarly guarded (install will fall back to Layer 2), and the daemon code paths are verified synthetically. It does NOT mean the daemon has been observed to auto-resume a real session. Users on non-guarded hosts may achieve real end-to-end behavior, but this has not been confirmed by the plugin authors as of v0.1.7.
 
+**(e) v0.1.9 measurement closure (added 2026-05-08).** v0.1.9 charter executed I-023-M1 measurement on a GitHub Actions macOS runner (macos-14 arm64) per term (c) "non-guarded reference host" requirement, satisfying term (b) "Actual measurement deferred to v0.1.9". Recorded latency: **cold-start p50/p95/max = 15.5 / 15.9 / 15.9 s** and **warm-start p50/p95/max = 5.3 / 5.8 / 5.8 s** at N=10 per arm. All three statistics are well below the term (a) ≤30s ship gate. Evidence archived at `docs/archives/measurement.v0.1.9.md`. Two methodology deviations (deviation-1: stub-claude substitution for plumbing-only validation; deviation-2: Gate_Human N/A for non-interactive evidence) are documented in `docs/specs/measurement-protocol.v0.1.9.md §methodology-deviations` with explicit validity boundaries. This term is ADDITIVE — it does not modify §7 (a)–(d) frozen content; it records measurement closure for I-023-M1.
+
 ### Cross-references
 
 - LessonsLearned L-1 (kpi-deferral): `docs/archives/lessons-learned.v0.1.7.md` §L-1
@@ -939,3 +941,4 @@ The following four terms collectively define the v0.1.7 → v0.1.9 measurement d
 - I-023-M1 RAID entry: `docs/archives/audit-trail.v0.1.7.jsonl` (search `event_id: I-023` or PROJECT-CLOSE-LESSONS-LEARNED)
 - AC-4-A..AC-4-G frozen acceptance criteria: this document §4 (Launchd Plist Template), subsection §Acceptance criteria
 - v0.1.8 charter authority: `PROGRESS.md` (active charter, `feat/v0.1.8-measurement-deferral` branch)
+- v0.1.9 measurement closure (term (e)): `docs/archives/measurement.v0.1.9.md`; methodology deviations: `docs/specs/measurement-protocol.v0.1.9.md §methodology-deviations`

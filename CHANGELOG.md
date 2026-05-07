@@ -4,6 +4,34 @@ All notable changes to the `/teamwork-leader` plugin documented here. Format fol
 
 <!-- Entry conventions (forward-going `### Notes` plural; ### Note: avoided): see docs/conventions/changelog.md -->
 
+## [0.1.9] — 2026-05-08
+
+### Added
+
+- **`docs/specs/measurement-protocol.v0.1.9.md`** — 9 normative sections + AC-1..AC-5 strict three-statistic ≤30s + PO-2 N=10 p95=max degeneracy clause + PO-4 parallel/Q0 carryover note + `§methodology-deviations` (deviation-1: stub-claude TimeoutExpired equivalent; deviation-2: Gate_Human N/A non-interactive evidence). Deviations registered via M-2 + M-4 CCB-Light.
+- **`docs/archives/measurement.v0.1.9.md`** — I-023-M1 measurement evidence archive: GHA macos-14 arm64 run 25375693016; N=10 cold + N=10 warm all OK; cold p50/p95/max=15.5/15.9/15.9s; warm p50/p95/max=5.3/5.8/5.8s — all ≤30s ship gate. Includes `host_env.json` (os/arch/launchctl_bootstrap_path/hook_chain/plist_install_path/runner_info).
+- **`.github/workflows/measure-execution.yml`** — measurement workflow with matrix `[macos-14, macos-13]` `fail-fast: false` + dual-detection + per-arch evidence upload.
+- **`tools/measure-{write-baton,poll-resumed,compute-stats}.py`** + `tools/patch-plist-python3.py` (workflow-layer GHA macOS Python 3.9 PEP 604 compatibility fix; daemon spec NOT modified).
+- **`docs/specs/auto-resume-daemon-design.md §7 — term (e) v0.1.9 measurement closure`** — APPENDED 2026-05-08; ADDITIVE to (a)–(d) FROZEN content. Records p50/max + cross-references measurement archive + methodology deviations.
+- **`skills/teamwork-leader-workflow/references/stage-runbook.md §step-review-rubric + §GATING attribution-truth`** — L-2 advisory→MUST one-way ratchet codification with revert criterion (T-1-0 ship-blocking per Opus PlanAudit promotion).
+- `.claude-plugin/plugin.json` version 0.1.9.
+
+### Changed
+
+- **`README.md` §已知量測缺口 警語移除** (line 105 area) — replaced v0.1.7→v0.1.9 deferral warning paragraph with v0.1.9 measurement closure summary citing archive + protocol + design.md §7 (e). Reflects I-023-M1 RAID closure.
+
+### Why
+
+v0.1.9 closes the v0.1.7 measurement deferral codified in `design.md §7` term (b) by executing I-023-M1 on a non-guarded reference host (GHA macos-14 arm64) per term (c). All three statistics (cold/warm × p50/p95/max) confirm baton-write→SESSION_RESUMED ≤30s ship gate (term a). Two methodology deviations were registered as spec authorizations (M-2 + M-4 CCB-Light) rather than silent reinterpretation, keeping the tag commit self-evidencing per `feedback_tag-commit-self-evidence` discipline. FROZEN spec held end-to-end (`git diff origin/main..HEAD -- daemon.py design.md` empty before §7 (e) APPEND). Daemon FROZEN-spec changes (I-061/I-064/I-065) deferred to v0.1.10 per Opus PlanAudit B1 anti-staleness ruling.
+
+### Migration
+
+None. Doc + workflow + measurement-tool additions; no API / schema / runtime behavior changes. Existing installations continue to work; v0.1.9 measurement evidence is read-only archival.
+
+### Notes
+
+- **[0.1.7] back-fill remains deferred**: full v0.1.7 release record preserved in `docs/archives/lessons-learned.v0.1.7.md`, `docs/archives/PROGRESS.v0.1.7.md`, and `docs/specs/phase-4-evidence/stage-4-close-report.txt`. Back-fill of `[0.1.7]` CHANGELOG entry remains deferred as OPTIONAL future CCB-Light (per v0.1.8 RAID-I I-2 inheritance); v0.1.9 does not back-fill it.
+
 ## [0.1.8] — 2026-05-05
 
 ### Added
