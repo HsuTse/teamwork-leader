@@ -55,6 +55,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Verify python3 >= 3.10 (AC-9 hard gate)
+        run: |
+          python3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)" \
+            || (echo "::error::python3 version <3.10 detected; AC-9 hard gate FAIL — ensure setup-python@v5 input python-version: 3.10+ precedes this step" && exit 1)
+
       # ── Environment setup ─────────────────────────────────────────────────────
       - name: Create .teamlead workspace directory
         run: mkdir -p "$CLAUDE_PROJECT_DIR/.teamlead"

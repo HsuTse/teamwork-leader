@@ -1,0 +1,49 @@
+name: measure-execution-prevalidation — real-claude smoke test (T-2-2 pre-val)
+
+# Throwaway pre-validation workflow to determine if real claude CLI can be
+# installed on GHA macos-14 runners without interactive auth prompts.
+#
+# Gate decision:
+#   PASS -> proceed to Candidate A (real-claude GHA measurement)
+#   FAIL -> fall back to Candidate B (stub-confirmed; register CCBL-Stage2-T22-stub-fallback)
+#
+# Bail criterion: any step exits != 0 OR stdout contains /authenticate|login required/i
+# OR npm install step exceeds 4 min.
+#
+# This workflow is intentionally minimal (one job, 5 steps).
+# After gate decision, it will be removed or archived.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/v0.1.10-daemon-spec-changes
+
+jobs:
+  prevalidate-claude-install:
+    runs-on: macos-14
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Attempt npm install of claude CLI
+        id: install_claude
+        timeout-minutes: 4
+        run: |
+          npm install -g @anthropic-ai/claude-code || echo "INSTALL_FAILED"
+
+      - name: Check claude binary availability
+        run: |
+          which claude || echo "CLAUDE_NOT_FOUND"
+          claude --version || echo "CLAUDE_VERSION_FAILED"
+
+      - name: Smoke test claude help (non-interactive)
+        run: |
+          claude /help </dev/null 2>&1 | head -20 || echo "CLAUDE_HELP_FAILED"
