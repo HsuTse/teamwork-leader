@@ -530,7 +530,7 @@ The `-p` flag is present: daemon.py passes `restore_prompt` as the new-turn inpu
 
 ### Stage 4 acceptance criteria
 
-The following 7 acceptance criteria define the observable DoD for Stage 4 close. Each maps to a verifiable command or evidence file. They extend but do not replace Stage 3 acceptance criteria (a)–(g).
+The following 7 design-frozen DoD acceptance criteria define the observable DoD for Stage 4 close. Each maps to a verifiable command or evidence file. They extend but do not replace Stage 3 acceptance criteria (a)–(g). See §4.X for 3 task-level addenda.
 
 | ID | Criterion | Observable verification |
 |---|---|---|
@@ -541,6 +541,16 @@ The following 7 acceptance criteria define the observable DoD for Stage 4 close.
 | AC-4-E | check-cross-refs.sh exits 0 after daemon.py is added (daemon.py's `lib/` references all resolve) | `bash tools/check-cross-refs.sh` exits 0 (≥ 0 additional refs from daemon.py; all resolved) |
 | AC-4-F | I-023 Metric 1 measurable: `tools/measure-latency.sh` produces a timing record with `daemon_present=true` and `precompact_to_daemon_s` field populated (even if latency exceeds 30 s target on first run) | `bash tools/measure-latency.sh --dry-run` exits 0 and emits a record with `daemon_present=true` |
 | AC-4-G | No breaking changes to existing 3 hooks + 4 libs: `check-cross-refs.sh` still exits 0 AND all 7 existing scripts pass their own `--test-mode`/`--self-test` flags unmodified | `bash tools/check-cross-refs.sh && python3 hooks/pre-compact.py --test-mode && python3 hooks/session-start.py --self-test && python3 hooks/stop.py --test-mode && python3 lib/baton-writer.py --self-test && python3 lib/gate-lock.py --self-test && python3 lib/notifier.py --self-test` — all exit 0 |
+
+#### §4.X Task-level acceptance criteria (post-hoc TeamLead-coined; not design-frozen DoD)
+
+The following 3 criteria were coined by TeamLead during Stage 4 EXECUTING (not in the original design freeze) and are preserved here for traceability. They supplement the 7 design-frozen criteria above but do not carry the same DoD authority; discrepancies against them trigger RAID-I rather than CCB-Heavy.
+
+| ID | Criterion | Observable verification |
+|---|---|---|
+| AC-4-H | tools/measure-latency.sh extended with 3 evidence files from a real measurement run | `bash tools/measure-latency.sh --dry-run` exits 0; 3 evidence files present in `docs/audits/` per T-4-9 task scope |
+| AC-4-I | Real-session dogfood in degraded-mode per acceptance (d): TeamLead self-dogfood charter completes a full AutoCompact-interrupted session cycle with daemon present | v0.1.7 stage-4-close-report.txt section 5 records degraded-mode acceptance outcome (d) PASS |
+| AC-4-J | stage-4-close-report.txt contains 7 mandatory sections + cosmetic RAID batch closed | `grep -c '^##' docs/reports/stage-4-close-report.txt` ≥ 7; `grep 'cosmetic' docs/reports/stage-4-close-report.txt` ≥ 1 |
 
 ### Stage 4 open questions for PLAN_AUDIT arbitration
 
@@ -942,3 +952,14 @@ The following four terms collectively define the v0.1.7 → v0.1.9 measurement d
 - AC-4-A..AC-4-G frozen acceptance criteria: this document §4 (Launchd Plist Template), subsection §Acceptance criteria
 - v0.1.8 charter authority: `PROGRESS.md` (active charter, `feat/v0.1.8-measurement-deferral` branch)
 - v0.1.9 measurement closure (term (e)): `docs/archives/measurement.v0.1.9.md`; methodology deviations: `docs/specs/measurement-protocol.v0.1.9.md §methodology-deviations`
+
+**(f) v0.1.9 cold-start reliability budget (added 2026-05-08, AC-8 closure per CCBL-Stage2-v0.1.10-T24-ANCHOR).**
+
+<!-- ccb: clarify 2026-05-08 — AC-8: v0.1.9 cold p50 reliability budget note; 15.5s/30s=52% utilization, 48% headroom; v0.1.10 dual-host re-validation required -->
+
+- Cold p50 = 15.5 s (v0.1.9 GHA macos-14 arm64 reference; see `docs/archives/measurement.v0.1.9.md` §statistics)
+- Ship gate = 30 s (term (a) of this §7)
+- Utilization = 15.5 / 30 = 52 %
+- Headroom = 48 % (14.5 s absolute)
+- v0.1.10 charter re-validates this budget on local macOS + GHA macos-14 dual-host per AC-7 / AC-8; updated dual-host figures recorded in `docs/archives/measurement-real-claude.v0.1.10.md` §interpretation (post-Stage-2 EXECUTING). If either host post-v0.1.10 measurement exceeds 52 % utilization → flag as RAID-I for budget-erosion review.
+- Charter-clarification: AC-8 anchor `§reliability budget` realized as this §7 term (f) per CCBL-Stage2-v0.1.10-T24-ANCHOR (semantic equivalence; FROZEN-spec untouched — additive term pattern from terms (a)-(e) per v0.1.8 amendment).

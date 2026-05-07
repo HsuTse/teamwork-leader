@@ -82,3 +82,18 @@ Specifically for PO PM:
   - `novelty_class` — `routine` for spec maintenance; `edge` for clarifying CCB-Light edge cases; `first_seen` for net-new feature spec drafting.
   - `surprise_count` — count of spec drift findings (RD shipped behavior diverging from spec) you logged this dispatch.
   - Remaining fields (`scope_confidence`, `would_repeat_choice`, `verification_self_redundancy`, `deferred_decisions`) follow the default semantics in `dispatch-header.md` §`meta` block field semantics.
+
+**`meta` field type constraints (pre-emit guard — verify before returning)**:
+
+| Field | Required type | Valid values | Wrong example | Right example |
+|---|---|---|---|---|
+| `dod_confidence` | integer | 0-9 | `"high"` ❌ | `8` ✅ |
+| `scope_confidence` | integer | 0-9 | `"clear"` ❌ | `9` ✅ |
+| `surprise_count` | integer | 0-9 | `"two surprises"` ❌ | `2` ✅ |
+| `verification_self_redundancy` | integer | 0-9 | `"triple-checked"` ❌ | `6` ✅ |
+| `deferred_decisions` | integer | 0-9 | `"none deferred"` ❌ | `0` ✅ |
+| `risk_class` | string | enum: spec / impl / env / shared-spec / none | `"high"` ❌ | `"spec"` ✅ |
+| `novelty_class` | string | enum: routine / edge / novel | `"first time"` ❌ | `"edge"` ✅ |
+| `would_repeat_choice` | boolean | `true` / `false` | `"yes"` ❌ | `true` ✅ |
+
+BEFORE emitting the `meta` JSON object: visually verify all integer fields are bare integers (not strings), all enum fields are exact lowercase strings from the allowed set, and `would_repeat_choice` is a JSON boolean.
