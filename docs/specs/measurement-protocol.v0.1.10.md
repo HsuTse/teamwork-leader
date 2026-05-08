@@ -136,3 +136,26 @@ All acceptance criteria from `docs/specs/measurement-protocol.v0.1.9.md §accept
 **Inheritance to future charters**: v0.1.11 carries forward — install-lifecycle hardening (Option B template fix or Option A permission rule), and once shipped, AC-7(i) local measurement re-validates against this deviation. If v0.1.11 install-lifecycle work resolves the env-class block, deviation-3 is superseded; if not, deviation-3 status escalates to permanent host-class restriction documented at v0.1.7+ design baseline.
 
 **Ship gate impact**: AC-7 overall PARTIAL for v0.1.10. Stage 2 close acceptable per Opus PlanAudit S2 `partial_acceptable_for_Stage2_close` rule (empirical proof exists; not silent skip). Gate_Requirement at Stage 2 close evaluates AC-7 as PARTIAL-MET with explicit deviation-3 evidence.
+
+### deviation-4: GHA real-claude/daemon integration gap empirically proven (10/10 cold + 10/10 warm SESSION_RESUMED FAIL) — AC-7(ii) PROVEN-INTEGRATION-GAP
+
+**Date registered**: 2026-05-08 (CCBL-Stage2-v0.1.10-T22-GHA-INTEGRATION-GAP)
+
+**Scope**: AC-7(ii) `GHA macos-14 reference host` real-claude end-to-end measurement.
+
+**Empirical evidence**: GHA workflow run 25532761179 (`measure-execution.yml` Candidate A path; commit efbd5af; 2026-05-08T02:13Z):
+- Pre-validation (run 25521618249) confirmed real claude installable: claude 2.1.132 at /opt/homebrew/bin/claude in 26s, no auth issues
+- Main run installed claude 2.1.133 successfully (3s); AC-9 hard gate PASS (Python 3.11.9); daemon installed each cold cycle (~13s install)
+- **10/10 cold runs FAIL at C-4 (SESSION_RESUMED poll timeout 90s)**
+- **10/10 warm runs FAIL at W-3 (SESSION_RESUMED poll timeout 60s)**
+- cold_runs.jsonl + warm_runs.jsonl: 0 bytes each
+- Cold AC-2: FAIL / Warm AC-2: FAIL / AC-3: FAIL / AC-1: FAIL (cold=0 warm=0)
+- Cleanup ran successfully — no host-state contamination
+
+**Root cause classification**: Daemon's SESSION_RESUMED signal-detection logic (in `scripts/daemon.py` polling target / `tools/measure-poll-resumed.py` polling implementation) was implicitly designed against stub-claude artifact format. Real claude (`claude --resume <session-id>` invocation by daemon) does not produce equivalent observable signal that the polling tool watches for. This is a v0.1.7 daemon-design assumption that surfaced only at v0.1.10 first real-claude end-to-end attempt. Detailed evidence + 4 hypothesis vectors in `docs/archives/measurement-real-claude-gha.v0.1.10.md` §root-cause-analysis.
+
+**Validity boundary**: This deviation declares AC-7(ii) FAIL on real-claude end-to-end measurement under the v0.1.7-v0.1.10 daemon polling design. AC-7(ii) evidence layer for v0.1.10 is therefore restricted to: install-layer PASS (real claude installable on GHA macos-14) + integration-layer FAIL (signal-detection mismatch). Real-claude/daemon integration engineering deferred to v0.1.11 per anti-scope-creep mandate (charter Constraints).
+
+**Inheritance to future charters**: v0.1.11 carries forward as RAID-V11-real-claude-integration (sev:high; blocks all real-claude measurement on any host class). v0.1.11 work: (a) characterize what real claude produces on `--resume`, (b) update daemon polling target OR claude-side hook OR baton schema accordingly, (c) re-run AC-7(ii) against patched integration. Once shipped, this deviation is superseded; until then, AC-7 measurement remains stub-confirmed only.
+
+**Ship gate impact**: AC-7 (overall) status: PARTIAL with comprehensive empirical proof of unavailability for both host paths (deviation-3 covers AC-7(i) env-class block; deviation-4 covers AC-7(ii) integration-gap). Stage 2 close acceptable per Opus PlanAudit S2 partial_acceptable rule. Gate_Requirement at Stage 2 close evaluates AC-7 as PARTIAL-MET with both deviations cited as primary evidence.
