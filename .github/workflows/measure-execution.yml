@@ -86,7 +86,10 @@ jobs:
       # in non-interactive GHA shell during T5 session-resume invocation.
       - name: Install real claude CLI
         run: |
-          npm install -g @anthropic-ai/claude-code
+          if ! npm install -g @anthropic-ai/claude-code; then
+            echo "::error::install failed — npm install -g @anthropic-ai/claude-code returned non-zero"
+            exit 1
+          fi
           REAL_CLAUDE_DIR=$(dirname $(which claude))
           # Expose REAL_CLAUDE_DIR for plist PATH injection (launchd does not inherit
           # the shell PATH; the real claude binary must be explicitly on launchd PATH).
@@ -115,6 +118,38 @@ jobs:
           which claude
           claude --version
           echo "real claude verified: $(which claude)"
+
+      # ── Session init for measurement baton (AC-2 Option B fix) ──────────────────
+      # v0.1.11 Stage 2: Run a real claude -p session to obtain a valid session_id.
+      # This session_id is passed to measure-write-baton.py via --session-id so the
+      # baton carries a UUID that real claude --resume can validate (V2 root-cause fix,
+      # docs/archives/real-claude-resume-characterization.v0.1.11.md §V2).
+      # GHA runner has no Anthropic credentials, so this step will exit non-zero.
+      # We capture whatever session_id we can; if none, we fall back to the local glob
+      # discovery in measure-write-baton.py (which also returns the synthetic literal
+      # on GHA where no .jsonl history exists — that path is unchanged from v0.1.10).
+      - name: Session init for measurement
+        id: session_init
+        run: |
+          set +e
+          INIT_OUT=$(claude -p 'Session init for measurement.' --output-format json 2>/dev/null)
+          INIT_EXIT=$?
+          set -e
+          SESSION_ID=""
+          if [ "$INIT_EXIT" -eq 0 ] && [ -n "$INIT_OUT" ]; then
+            SESSION_ID=$(echo "$INIT_OUT" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); print(d.get('session_id',''))" 2>/dev/null || echo "")
+          fi
+          if [ -n "$SESSION_ID" ]; then
+            echo "session_init_ok=true" >> "$GITHUB_OUTPUT"
+            echo "session_id=$SESSION_ID" >> "$GITHUB_OUTPUT"
+            echo "MEASUREMENT_SESSION_ID=$SESSION_ID" >> "$GITHUB_ENV"
+            echo "Session init OK: session_id=$SESSION_ID"
+          else
+            echo "session_init_ok=false" >> "$GITHUB_OUTPUT"
+            echo "session_id=" >> "$GITHUB_OUTPUT"
+            echo "MEASUREMENT_SESSION_ID=" >> "$GITHUB_ENV"
+            echo "Session init skipped (no auth or no session_id in output — measure-write-baton.py will use local-glob fallback)"
+          fi
 
       # ── Capture host environment (AC-4) ───────────────────────────────────────
       - name: Capture host environment (AC-4)
@@ -215,8 +250,9 @@ jobs:
             echo "  [C-1] Clean state confirmed"
 
             # C-2: Write baton (T0) — this is the measurement start anchor
+            # Pass --session-id from session_init step (may be empty; script uses local-glob fallback).
             echo "  [C-2] Writing measurement baton (T0)..."
-            BATON_WRITE_TS=$(python3 tools/measure-write-baton.py "$BATON_PATH")
+            BATON_WRITE_TS=$(python3 tools/measure-write-baton.py "$BATON_PATH" ${MEASUREMENT_SESSION_ID:+--session-id "$MEASUREMENT_SESSION_ID"})
             echo "  [C-2] T0=$BATON_WRITE_TS"
 
             # C-3: Install daemon (cold install — launchd bootstraps and watches dir)
@@ -264,11 +300,13 @@ jobs:
             echo "  [C-3] Install PASS"
 
             # C-4: Poll for SESSION_RESUMED
-            # ThrottleInterval=10s + poll cycle 5s + T5 processing (~3s stub) = expect ~18s max
-            echo "  [C-4] Polling for SESSION_RESUMED (timeout 90s)..."
+            # ThrottleInterval=10s + poll cycle 5s + T5 processing = expect ~18s max (stub).
+            # v0.1.11: daemon wait window extended to 30s + 28s poll = 58s max for real claude.
+            # Poll timeout increased 90→120s to accommodate the 30s daemon wait window.
+            echo "  [C-4] Polling for SESSION_RESUMED (timeout 120s)..."
             RUN_ID="cold-$(printf '%03d' "$i")"
             set +e
-            RESULT_JSON=$(python3 tools/measure-poll-resumed.py "$BATON_PATH" "$BATON_WRITE_TS" "$RUN_ID" "cold" 90)
+            RESULT_JSON=$(python3 tools/measure-poll-resumed.py "$BATON_PATH" "$BATON_WRITE_TS" "$RUN_ID" "cold" 120)
             POLL_EXIT=$?
             set -e
 
@@ -401,8 +439,9 @@ jobs:
             sleep 2
 
             # W-2: Write baton (T0)
+            # Pass --session-id from session_init step (may be empty; script uses local-glob fallback).
             echo "  [W-2] Writing measurement baton (T0)..."
-            BATON_WRITE_TS=$(python3 tools/measure-write-baton.py "$BATON_PATH")
+            BATON_WRITE_TS=$(python3 tools/measure-write-baton.py "$BATON_PATH" ${MEASUREMENT_SESSION_ID:+--session-id "$MEASUREMENT_SESSION_ID"})
             echo "  [W-2] T0=$BATON_WRITE_TS"
 
             # W-3: Poll for SESSION_RESUMED (warm: no launchd spin-up, faster)
