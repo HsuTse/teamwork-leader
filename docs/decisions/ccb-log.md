@@ -66,6 +66,23 @@ Created: 2026-05-04 (S4-PLAN-PO dispatch; first PO Light entry for Stage 4 desig
 <!-- No CCB-Heavy events have reached CEO decision stage as of 2026-05-04 (Stages 1-4).
      TeamLead will append detail blocks here if/when a Heavy is decided. -->
 
+### Stage 2 (v0.1.10 charter), CCB-Heavy #1 (decided 2026-05-10)
+
+- **id**: CCBH-v0.1.10-AC7-DEMOTE-V0.1.11
+- **time-raised**: 2026-05-08T10:35+08:00 (ESCALATED state entry; AC-7 PROVEN-INTEGRATION-GAP confirmed from GHA run 25532761179)
+- **time-decided**: 2026-05-10T09:03:41+08:00 (CEO selected verb=`revise_charter` from 4-verb ESCALATED menu via AskUserQuestion)
+- **Origin**: ESCALATED — charter-level AC failure (AC-7 real-claude end-to-end measurement PROVEN-BLOCKED on both host classes); CEO 4-verb decision required before release
+- **Linked Light entries**: CCBL-Stage2-v0.1.10-T21-LOCAL-BLOCKED (deviation-3; local env-class block) + CCBL-Stage2-v0.1.10-T22-GHA-INTEGRATION-GAP (deviation-4; GHA integration-layer failure)
+- **Material change**: AC-7 demoted from v0.1.10 must-have to v0.1.11-deferred per deviation-3 (local PROVEN-UNAVAILABLE env-class) + deviation-4 (GHA PROVEN-INTEGRATION-GAP); v0.1.10 ship gate proceeds without AC-7
+- **CEO verb**: approve (`revise_charter` — recommended path from ESCALATED 4-verb menu)
+- **Impact summary**: 4 v0.1.11 RAID carry-forward registered (RAID-V11-real-claude-integration sev:HIGH + RAID-V11-install-lifecycle-python3-path sev:MED + RAID-V11-ccb-token-cost sev:MED + RAID-V11-pm-subagent-disclosure sev:MED); no budget recalculation required (Stage 2 actual ~195 kT vs 450 baseline); tag v0.1.10 proceeds per CEO_Gate_Final approve
+- **Post-decision actions taken**:
+  - [x] PROGRESS.md ## Charter APPENDED (append-only per §5.5.1): AC-7 demoted; AC-1..6+8+9+10 met; tag v0.1.10 proceeds
+  - [x] PROGRESS.md State: ESCALATED → REPORTING; Stage 2 StageReport written
+  - [x] PROGRESS.md ## RAID Register §Stage 2 → v0.1.11 carry: 4 RAIDs registered
+  - [x] docs/decisions/ccb-log.md §Heavy events: this row appended
+- **RAID delta applied**: RAID-V11-real-claude-integration (open-v0.1.11, sev:HIGH) + RAID-V11-install-lifecycle-python3-path (open-v0.1.11, sev:MED) + RAID-V11-ccb-token-cost (open-v0.1.11, sev:MED) + RAID-V11-pm-subagent-disclosure (open-v0.1.11, sev:MED)
+
 ## Cap-rule audit (per stage, derived from Light tables above)
 
 | Stage | Light count | Same-section max | ≥3 same-section breach? | ≥5 stage total breach? | Auto-escalated to CCB-Heavy? |
@@ -96,7 +113,7 @@ Created: 2026-05-04 (S4-PLAN-PO dispatch; first PO Light entry for Stage 4 desig
 <!-- Will be populated at ProjectClose. -->
 
 - Total CCB-Light: 16 (CCBL-001 + CCBL-002 + CCBL-003 + CCBL-Stage3-001 + CCBL-Stage4-S4-PLAN-PO + CCBL-Stage4-T-4-6 + CCBL-Stage5-S1-D1 + CCBL-Stage1-v0.1.9-M4 + CCBL-Stage1-v0.1.10-AC1-WORDING + CCBL-Stage1-v0.1.10-AC4-PLACEMENT + CCBL-Stage1-v0.1.10-AC10-EVIDENCE + CCBL-Stage1-v0.1.10-MP-PROTOCOL + CCBL-Stage1-v0.1.10-GATE-HUMAN-NA + CCBL-Stage2-v0.1.10-T24-ANCHOR + CCBL-Stage2-v0.1.10-T21-LOCAL-BLOCKED + CCBL-Stage2-v0.1.10-T22-GHA-INTEGRATION-GAP)
-- Total CCB-Heavy: 0
+- Total CCB-Heavy: 1 (CCBH-v0.1.10-AC7-DEMOTE-V0.1.11)
 - Most-revised sections: §4 daemon.py contract (1), payload-channel (1), plan-decomp-strategy (1)
 
 ## Cross-reference
