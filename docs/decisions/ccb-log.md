@@ -80,6 +80,9 @@ Created: 2026-05-04 (S4-PLAN-PO dispatch; first PO Light entry for Stage 4 desig
 | 2026-05-10 | `Stage 3 (v0.1.11) §Charter clarification` | CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME | Charter §AC-3 reframed: "GHA macos-14 reference host" → "local macOS host (real user deployment environment)"; §Constraints append explicit CI-scope-only clause | inline PROGRESS.md ## CCB Activity ### Stage 3 (v0.1.11 charter) |
 | 2026-05-10 | `Stage 3 (v0.1.11) §CCB-Heavy CR scope amendment` | CCBL-Stage3-v0.1.11-PhaseB-CR-INVALID-PREMISE | CR-V0.1.11-S3-Phase-B-guard-exemption "guard relax" premise empirically refuted post-approve; CEO re-decision: revised path (no guard edit); ~16 kT savings + zero security posture change | inline PROGRESS.md ## CCB Activity ### Stage 3 (v0.1.11 charter) |
 | 2026-05-10 | `Stage 3 (v0.1.11) §Workaround application + RAID escalation` | CCBL-Stage3-v0.1.11-PhaseB-PYTHON-PATH-WORKAROUND | Python 3.9 vs 3.10+ launchd PATH blocker (Discovery #2); patch-plist-python3.py applied per Opus advisor (A) recommendation; RAID-V11-install-lifecycle-python3-path escalated v0.1.12 carry-candidate → mandatory HIGH | inline PROGRESS.md ## CCB Activity ### Stage 3 (v0.1.11 charter) |
+| 2026-05-10 | `Stage 3 (v0.1.11) §Gate_Human declaration` | CCBL-Stage3-v0.1.11-GATE-HUMAN-NA | non-interactive scope (daemon code execution + measurement evidence + governance docs; zero UI surface); mirrors Stage 1+2 + v0.1.10 precedent | inline PROGRESS.md ## Stage History ### Stage 3 |
+| 2026-05-10 | `Stage 3 (v0.1.11) §PM dispatch return integrity` | CCBL-Stage3-v0.1.11-PO-D4-SCHEMA-DEVIATION | PO V0.1.11-S3-D4 first return missed 5 mandatory fields (outcome / value_hypothesis / value_realized / raid_updates / token_estimate_kT); substantive work in commit 101b677 verified correct (5/5 sub-tasks) by TeamLead Anti-rubber-stamp + Sonnet step-review PASS_WITH_MINOR | inline PROGRESS.md ## CCB Activity ### Stage 3 |
+| 2026-05-10 | `Stage 3 (v0.1.11) §PM dispatch reliability` | CCBL-Stage3-v0.1.11-PO-D4-RETRY-HALLUCINATION | Schema retry dispatch produced hallucinated content (referenced nonexistent files; fabricated AC sub-tasks). Decision: REJECT retry; ACCEPT original commit 101b677 as substantively correct. v0.1.12 carry RAID-V12-pm-dispatch-retry-grounding (PM retry prompts must require git-show grounding) | inline PROGRESS.md ## CCB Activity ### Stage 3 |
 
 ## Heavy events
 
@@ -136,7 +139,7 @@ Created: 2026-05-04 (S4-PLAN-PO dispatch; first PO Light entry for Stage 4 desig
 | 2 (v0.1.10) | 3 | 1 (T24-ANCHOR / T21-LOCAL-BLOCKED / T22-GHA-INTEGRATION-GAP — three different sections) | no | no | no |
 | 1 (v0.1.11) | 1 | 1 (GATE-HUMAN-NA) | no | no | no |
 | 2 (v0.1.11) | 1 | 1 (GATE-HUMAN-NA) | no | no | no |
-| 3 (v0.1.11) | 3 | 1 (AC3-LOCAL-REFRAME / PhaseB-CR-INVALID-PREMISE / PhaseB-PYTHON-PATH-WORKAROUND — three different sections) | no | no | no |
+| 3 (v0.1.11) | 6 | 1 (AC3-LOCAL-REFRAME / PhaseB-CR-INVALID-PREMISE / PhaseB-PYTHON-PATH-WORKAROUND / GATE-HUMAN-NA / PO-D4-SCHEMA-DEVIATION / PO-D4-RETRY-HALLUCINATION — six different sections) | no | yes (6 stage-total > cap-5; auto-cap-rule audit — see Suppression escape hatch) | no |
 
 ## Suppression escape hatch usage (per pmp-ccb.md §Cap rules)
 
@@ -152,13 +155,13 @@ Created: 2026-05-04 (S4-PLAN-PO dispatch; first PO Light entry for Stage 4 desig
 | 2 (v0.1.10) | no | n/a |
 | 1 (v0.1.11) | no | n/a |
 | 2 (v0.1.11) | no | n/a |
-| 3 (v0.1.11) | no | n/a |
+| 3 (v0.1.11) | **yes — escape hatch invoked** | All 6 entries (AC3-LOCAL-REFRAME / PhaseB-CR-INVALID-PREMISE / PhaseB-PYTHON-PATH-WORKAROUND / GATE-HUMAN-NA / PO-D4-SCHEMA-DEVIATION / PO-D4-RETRY-HALLUCINATION) originated from atomic single-execution events: 3 from CR-V0.1.11-S3-Phase-B-guard-exemption execution chain (CCBL-AC3-REFRAME → CCBL-CR-INVALID-PREMISE → CCBL-PYTHON-PATH-WORKAROUND); 1 Gate declaration (consistent with Stage 1+2 + v0.1.10 pattern); 2 PO V0.1.11-S3-D4 dispatch return integrity (schema gap + retry hallucination — both registered immediately, not chronic drift). Per `references/pmp-ccb.md §Cap rules`, suppression escape hatch is correct call when cap is reached via single-event atomic closures (analogous to Stage 1 v0.1.10 escape hatch invocation 5-entry case). |
 
 ## Project-level CCB statistics
 
 <!-- Will be populated at ProjectClose. -->
 
-- Total CCB-Light: 21 (CCBL-001 + CCBL-002 + CCBL-003 + CCBL-Stage3-001 + CCBL-Stage4-S4-PLAN-PO + CCBL-Stage4-T-4-6 + CCBL-Stage5-S1-D1 + CCBL-Stage1-v0.1.9-M4 + CCBL-Stage1-v0.1.10-AC1-WORDING + CCBL-Stage1-v0.1.10-AC4-PLACEMENT + CCBL-Stage1-v0.1.10-AC10-EVIDENCE + CCBL-Stage1-v0.1.10-MP-PROTOCOL + CCBL-Stage1-v0.1.10-GATE-HUMAN-NA + CCBL-Stage2-v0.1.10-T24-ANCHOR + CCBL-Stage2-v0.1.10-T21-LOCAL-BLOCKED + CCBL-Stage2-v0.1.10-T22-GHA-INTEGRATION-GAP + CCBL-Stage1-v0.1.11-GATE-HUMAN-NA + CCBL-Stage2-v0.1.11-GATE-HUMAN-NA + CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME + CCBL-Stage3-v0.1.11-PhaseB-CR-INVALID-PREMISE + CCBL-Stage3-v0.1.11-PhaseB-PYTHON-PATH-WORKAROUND)
+- Total CCB-Light: 24 (CCBL-001 + CCBL-002 + CCBL-003 + CCBL-Stage3-001 + CCBL-Stage4-S4-PLAN-PO + CCBL-Stage4-T-4-6 + CCBL-Stage5-S1-D1 + CCBL-Stage1-v0.1.9-M4 + CCBL-Stage1-v0.1.10-AC1-WORDING + CCBL-Stage1-v0.1.10-AC4-PLACEMENT + CCBL-Stage1-v0.1.10-AC10-EVIDENCE + CCBL-Stage1-v0.1.10-MP-PROTOCOL + CCBL-Stage1-v0.1.10-GATE-HUMAN-NA + CCBL-Stage2-v0.1.10-T24-ANCHOR + CCBL-Stage2-v0.1.10-T21-LOCAL-BLOCKED + CCBL-Stage2-v0.1.10-T22-GHA-INTEGRATION-GAP + CCBL-Stage1-v0.1.11-GATE-HUMAN-NA + CCBL-Stage2-v0.1.11-GATE-HUMAN-NA + CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME + CCBL-Stage3-v0.1.11-PhaseB-CR-INVALID-PREMISE + CCBL-Stage3-v0.1.11-PhaseB-PYTHON-PATH-WORKAROUND + CCBL-Stage3-v0.1.11-GATE-HUMAN-NA + CCBL-Stage3-v0.1.11-PO-D4-SCHEMA-DEVIATION + CCBL-Stage3-v0.1.11-PO-D4-RETRY-HALLUCINATION)
 - Total CCB-Heavy: 2 (CCBH-v0.1.10-AC7-DEMOTE-V0.1.11 + CR-V0.1.11-S3-Phase-B-guard-exemption)
 - Most-revised sections: §4 daemon.py contract (1), payload-channel (1), plan-decomp-strategy (1)
 
