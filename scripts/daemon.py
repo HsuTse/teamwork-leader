@@ -578,13 +578,11 @@ def _run_t5_actor(
                         exit_code = proc.wait(timeout=30.0)
                     except subprocess.TimeoutExpired:
                         # Primary 30s window exhausted — poll for up to 28s more residual.
-                        poll_budget_s: float = 28.0
-                        poll_interval_s: float = 0.5
-                        elapsed: float = 0.0
+                        # Use monotonic deadline to avoid float-accumulation drift on loaded runners.
+                        poll_deadline = time.monotonic() + 28.0
                         exit_code = None
-                        while elapsed < poll_budget_s:
-                            time.sleep(poll_interval_s)
-                            elapsed += poll_interval_s
+                        while time.monotonic() < poll_deadline:
+                            time.sleep(0.5)
                             poll_result = proc.poll()
                             if poll_result is not None:
                                 exit_code = poll_result

@@ -84,10 +84,7 @@ def main() -> None:
     args = _parse_args(sys.argv[1:])
     baton_path = args.baton_path
 
-    if args.session_id is not None:
-        session_id = args.session_id
-    else:
-        session_id = _discover_local_session_id()
+    session_id = args.session_id if args.session_id is not None else _discover_local_session_id()
 
     baton = {
         "session_id": session_id,

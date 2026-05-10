@@ -26,7 +26,6 @@ SUMMARY_OUT = os.path.join(ROOT, "docs", "specs", "v0.1.11-evidence", "synthetic
 
 
 def _pct(sorted_vals: list[float], p: float) -> float:
-    # _pct: assumes sorted_vals is already sorted (caller responsibility; see _stats)
     return sorted_vals[max(0, math.ceil(p / 100.0 * len(sorted_vals)) - 1)]
 
 

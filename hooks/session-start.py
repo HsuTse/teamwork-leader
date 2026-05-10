@@ -260,10 +260,12 @@ def _check_hook_integrity() -> None:
         committed_hash = None
         try:
             with open(evidence_path, "r", encoding="utf-8") as fh:
+                _SHA256_PREFIX = "sha256: "
+                _SHA256_LINE_LEN = len(_SHA256_PREFIX) + 64  # 8 + 64 hex chars
                 for line in fh:
                     line = line.strip()
-                    if line.startswith("sha256: ") and len(line) == 72:
-                        committed_hash = line[8:]
+                    if line.startswith(_SHA256_PREFIX) and len(line) == _SHA256_LINE_LEN:
+                        committed_hash = line[len(_SHA256_PREFIX):]
                         break
         except OSError:
             # Evidence file absent (e.g., first install before v0.1.11 committed) — skip
