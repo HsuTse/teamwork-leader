@@ -37,7 +37,7 @@ jobs:
         id: install_claude
         timeout-minutes: 4
         run: |
-          npm install -g @anthropic-ai/claude-code || echo "INSTALL_FAILED"
+          if ! npm install -g @anthropic-ai/claude-code; then echo "::error::install failed"; exit 1; fi
 
       - name: Check claude binary availability
         run: |
