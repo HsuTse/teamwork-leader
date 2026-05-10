@@ -100,21 +100,23 @@ First measurement attempt failed: both cold + warm timed out at 90s. daemon.err 
 [daemon] INFO: gate_state='SESSION_RESUMED' — not BATON_WRITTEN, ignoring
 ```
 
-### 3.2 Measurement raw data (originally `.teamlead/_phase_b_measurements.jsonl`; transient — not committed)
+### 3.2 Measurement raw data (reproduced inline; this committed doc is self-evidencing)
+
+The raw JSONL lines below are reproduced verbatim from `.teamlead/_phase_b_measurements.jsonl` (transient ops file under .gitignore; ops helper `.teamlead/_phase_b_measure.py` retained for v0.1.12 reference). The latency claims at §1 are sourced FROM these lines. Embedding them here makes the committed evidence doc self-evidencing — if the transient file is lost, the numerical evidence persists in this doc.
 
 ```json
 {"label": "cold", "session_id": "ed6034b9-6975-4db8-9906-42b9ee67f7d4", "t0_mtime": 1778395501.823, "final_state": "SESSION_RESUMED", "latency_seconds": 12.099, "timeout": false}
 {"label": "warm", "session_id": "ed6034b9-6975-4db8-9906-42b9ee67f7d4", "t0_mtime": 1778395525.93, "final_state": "SESSION_RESUMED", "latency_seconds": 11.091, "timeout": false}
 ```
 
-### 3.3 §7 (g-1) AC-2 fix exercised (vs Phase C synthetic which bypassed it)
+### 3.3 §7 (g-1) AC-2 fix coverage (vs Phase C synthetic which bypassed it)
 
-| Phase | daemon code path exercised | §7 (g-1) timeout/poll loop |
-|---|---|---|
-| Phase C synthetic (`--self-test-t5`) | `_run_t5_actor(test_mode=True)` → `else` branch → directly writes SESSION_RESUMED | **Bypassed** (RAID-I-S3-D2-1) |
-| Phase B real launchd | `_run_t5_actor(test_mode=False)` → `subprocess.Popen(claude --resume ...)` → `proc.wait(timeout=30.0)` succeeds within 12s → SESSION_RESUMED | **Exercised** ✅ |
+| Phase | daemon code path exercised | §7 (g-1) primary 30s wait | §7 (g-1) post-timeout 28s poll loop |
+|---|---|---|---|
+| Phase C synthetic (`--self-test-t5`) | `_run_t5_actor(test_mode=True)` → `else` branch → directly writes SESSION_RESUMED | **Bypassed** (RAID-I-S3-D2-1) | **Bypassed** (RAID-I-S3-D2-1) |
+| Phase B real launchd | `_run_t5_actor(test_mode=False)` → `subprocess.Popen(claude --resume ...)` → `proc.wait(timeout=30.0)` succeeds within 12s → SESSION_RESUMED | **Exercised** ✅ (real claude exits at 12.099s cold / 11.091s warm, both within 30s primary window) | **Not triggered** (real claude exited < 30s; poll loop fallback would only fire if exit > 30s) |
 
-Phase B is the empirical validation of Charter AC-2 Option B daemon fix (§7 (g-1)) that Phase C alone could not provide.
+Phase B is the empirical validation of Charter AC-2 Option B daemon fix's **primary 30s wait path** (§7 (g-1) g-1.1 effectively). The **defensive post-timeout 28s poll loop fallback** (§7 (g-1) g-1.2 effectively) remains untriggered — it is a defensive layer for hypothetical real-claude exits in the 30-58s window. To exercise the poll loop empirically would require a session that takes > 30s for claude --resume to process, which was not available in this Phase B sample. v0.1.12 LL candidate: design a stress-test session (large jsonl) to deliberately probe the poll loop fallback path. For v0.1.11 ship, primary path validation is sufficient — Stage 1 AC-1 characterization observed real claude exits in 8-15s window, well within primary 30s; poll loop is a margin-of-safety defense, not a regularly-fired path.
 
 ### 3.4 Side-effects observed (governance-compliant; documented for transparency)
 
