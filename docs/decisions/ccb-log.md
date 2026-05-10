@@ -75,13 +75,13 @@ Created: 2026-05-04 (S4-PLAN-PO dispatch; first PO Light entry for Stage 4 desig
 - **Linked Light entries**: CCBL-Stage2-v0.1.10-T21-LOCAL-BLOCKED (deviation-3; local env-class block) + CCBL-Stage2-v0.1.10-T22-GHA-INTEGRATION-GAP (deviation-4; GHA integration-layer failure)
 - **Material change**: AC-7 demoted from v0.1.10 must-have to v0.1.11-deferred per deviation-3 (local PROVEN-UNAVAILABLE env-class) + deviation-4 (GHA PROVEN-INTEGRATION-GAP); v0.1.10 ship gate proceeds without AC-7
 - **CEO verb**: approve (`revise_charter` — recommended path from ESCALATED 4-verb menu)
-- **Impact summary**: 4 v0.1.11 RAID carry-forward registered (RAID-V11-real-claude-integration sev:HIGH + RAID-V11-install-lifecycle-python3-path sev:MED + RAID-V11-ccb-token-cost sev:MED + RAID-V11-pm-subagent-disclosure sev:MED); no budget recalculation required (Stage 2 actual ~195 kT vs 450 baseline); tag v0.1.10 proceeds per CEO_Gate_Final approve
+- **Impact summary**: 5 v0.1.11 RAID carry-forward registered (RAID-V11-real-claude-integration sev:HIGH + RAID-V11-install-lifecycle-python3-path sev:MED + RAID-V11-ccb-token-cost sev:MED + RAID-V11-pm-subagent-disclosure sev:MED + RAID-SEC-V11-backtick-subshell-injection sev:MED — last entry registered post-Phase C Ad-hoc Security PM LessonsLearned introspection); no budget recalculation required (Stage 2 actual ~195 kT vs 450 baseline); tag v0.1.10 proceeds per CEO_Gate_Final approve
 - **Post-decision actions taken**:
   - [x] PROGRESS.md ## Charter APPENDED (append-only per §5.5.1): AC-7 demoted; AC-1..6+8+9+10 met; tag v0.1.10 proceeds
   - [x] PROGRESS.md State: ESCALATED → REPORTING; Stage 2 StageReport written
-  - [x] PROGRESS.md ## RAID Register §Stage 2 → v0.1.11 carry: 4 RAIDs registered
+  - [x] PROGRESS.md ## RAID Register §Stage 2 → v0.1.11 carry: 5 RAIDs registered (4 at Phase A + 1 added at Phase C from Ad-hoc Security PM LL discovery)
   - [x] docs/decisions/ccb-log.md §Heavy events: this row appended
-- **RAID delta applied**: RAID-V11-real-claude-integration (open-v0.1.11, sev:HIGH) + RAID-V11-install-lifecycle-python3-path (open-v0.1.11, sev:MED) + RAID-V11-ccb-token-cost (open-v0.1.11, sev:MED) + RAID-V11-pm-subagent-disclosure (open-v0.1.11, sev:MED)
+- **RAID delta applied**: RAID-V11-real-claude-integration (open-v0.1.11, sev:HIGH) + RAID-V11-install-lifecycle-python3-path (open-v0.1.11, sev:MED) + RAID-V11-ccb-token-cost (open-v0.1.11, sev:MED) + RAID-V11-pm-subagent-disclosure (open-v0.1.11, sev:MED) + RAID-SEC-V11-backtick-subshell-injection (open-v0.1.11, sev:MED)
 
 ## Cap-rule audit (per stage, derived from Light tables above)
 

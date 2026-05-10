@@ -92,8 +92,8 @@ Specifically for PO PM:
 | `surprise_count` | integer | 0-9 | `"two surprises"` ❌ | `2` ✅ |
 | `verification_self_redundancy` | integer | 0-9 | `"triple-checked"` ❌ | `6` ✅ |
 | `deferred_decisions` | integer | 0-9 | `"none deferred"` ❌ | `0` ✅ |
-| `risk_class` | string | enum: spec / impl / env / shared-spec / none | `"high"` ❌ | `"spec"` ✅ |
-| `novelty_class` | string | enum: routine / edge / novel | `"first time"` ❌ | `"edge"` ✅ |
+| `risk_class` | string | enum: env / spec / impl / verifier / none | `"high"` ❌ | `"spec"` ✅ |
+| `novelty_class` | string | enum: routine / edge / first_seen | `"first time"` ❌ | `"edge"` ✅ |
 | `would_repeat_choice` | boolean | `true` / `false` | `"yes"` ❌ | `true` ✅ |
 
 BEFORE emitting the `meta` JSON object: visually verify all integer fields are bare integers (not strings), all enum fields are exact lowercase strings from the allowed set, and `would_repeat_choice` is a JSON boolean.
