@@ -74,6 +74,20 @@ divergence_score = |scope_confidence - scope_observed|
 
 4. **Legacy in-flight dispatch (no `meta`)**: degrade to existing 5-rule sampling path. Log `divergence_flag: legacy_no_meta` in `audit-trail.jsonl` so the rollout completion is observable.
 
+5. **Parse `sub_agent_invocations`** field (v0.1.11+ dispatches; per `dispatch-header.md` §Return contract addendum (v0.1.11)):
+
+   **Step 0.X — Sub-agent invocation disclosure check**
+
+   After parsing `meta` (step 1 above), check for the `sub_agent_invocations` field:
+
+   - **Trigger A** (missing field + parallel-dispatch declared): if the dispatch was declared as a parallel-dispatch in the approved plan AND the return JSON lacks a `sub_agent_invocations` field → return INCOMPLETE, cite "sub_agent_invocations field missing on parallel-dispatch". Re-dispatch once (1-retry pool, **distinct** from existing schema-validation retry pool per `dispatch-header.md` §Return contract line 132). Legacy in-flight dispatches (pre-v0.1.11) are exempt — TeamLead logs `sub_agent_invocations: legacy_exempt` in `audit-trail.jsonl` notes.
+
+   - **Trigger B** (unapproved non-trivial sub-agent): if any entry in `sub_agent_invocations` has `planaudit_approval_ref: null` AND `subagent_type` is not in the trivial-list → return INCOMPLETE, cite the specific entry. Trivial-list is initially empty (every sub-agent invocation must have a PlanAudit approval reference). Re-dispatch once (same Trigger-B retry pool, distinct from Trigger A pool and schema-validation pool).
+
+   If `sub_agent_invocations` is present but is an empty array `[]`, both triggers are satisfied — no action required.
+
+   Log `sub_agent_invocations_count` in `audit-trail.jsonl` per `dispatch-header.md` §Return contract addendum (v0.1.11).
+
 #### Worked examples
 
 **Example A — Aligned (low divergence)**:

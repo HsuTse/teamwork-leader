@@ -1,0 +1,5 @@
+// schema: {dispatch_id: string, parent_pm: string, sub_agent_invocations: [{subagent_type: string, scope: string, justification: string, planaudit_approval_ref: string|null}]}
+// v0.1.11+ dispatches append one row per dispatch that includes sub_agent_invocations field.
+// Empty array [] rows are written when no sub-agents were dispatched (field required for new dispatches).
+// Legacy in-flight dispatches (pre-v0.1.11) are exempt and do not appear here.
+// See: skills/teamwork-leader-workflow/references/dispatch-header.md §Return contract addendum (v0.1.11)
