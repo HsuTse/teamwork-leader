@@ -186,7 +186,7 @@ jobs:
               "launchctl_bootstrap_path": launchctl_path,
               "hook_chain": hook_chain,
               "plist_install_path": plist_install_path,
-              "runner_info": {"gha_runner_label": "macos-14", "gha_runner_arch": "ARM64"},
+              "runner_info": {"host_label": "macos-14", "host_arch": "ARM64"},
               "claude_binary": "real",
               "claude_path": claude_path,
               "claude_version": claude_ver,

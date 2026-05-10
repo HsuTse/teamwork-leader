@@ -1026,3 +1026,57 @@ The following §1 / §2 / §4 design decisions are NOT modified by this term:
 - CEO Option B acceptance: PROGRESS.md `## CEO Gate Log` 2026-05-10T~12:15+08:00 entry
 - RAID-V11-S1-daemon-timing-asymmetry: sev:HIGH → sev:LOW post-g-1 implementation
 - RAID-V11-workflow-install-safety: sev:MED → closed (bundled in this dispatch per < 5 kT estimate)
+
+**(h) v0.1.11 Stage 3 reference-host-vs-deployment-target framing clarification (added 2026-05-10).**
+
+<!-- ccb: clarify 2026-05-10 — FROZEN-DELTA-AUTHORIZED v0.1.11: Charter §AC-3 reframe via CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME; measurement context = local user deployment macOS host; GHA scope reduced to install/syntax verification only -->
+
+**Authority**: v0.1.11 charter (`feat/v0.1.11-real-claude-integration`), Stage 3 PLANNING dispatch V0.1.11-S3-D1, CEO scope challenge 2026-05-10T~13:00+08:00 → CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME registration 2026-05-10T~13:30+08:00. This term is ADDITIVE — it does not modify §1–§6 or §7 terms (a)–(g). It clarifies the HOST framing inherited from §7 (b)–(e) which used "non-guarded reference host" + GHA macos-14 substitution defensibly for stub-claude measurement.
+
+### Background: inherited GHA-as-reference-host framing
+
+v0.1.7 §7 (c) established a "reference-host requirement" with GHA macos-14 explicitly named as an acceptable substitute (see term (c) clauses (i)-(iv)). v0.1.9 §7 (e) executed I-023-M1 measurement on GHA per this clause. v0.1.10 §7 (f) extended to dual-host (local + GHA) per AC-7/AC-8. v0.1.11 inherited this framing into AC-3 (originally written "GHA macos-14 reference host").
+
+This framing was defensible for stub-claude measurement: the stub binary (`tools/claude-stub.sh`) requires no credentials, runs identically on GHA and local, gives reproducible/shared baselines. Real-claude integration (v0.1.11) breaks the framing.
+
+### Reframe rationale
+
+Real `claude --resume <uuid>` requires:
+- User-bound OAuth/credentials state in `~/.claude/` keychain (not transferable to ephemeral GHA runners)
+- Local session `.jsonl` files in `~/.claude/projects/<encoded_path>/` (not present on GHA fresh checkouts)
+- Local-state lookup semantics (not server-fetched session resolution)
+
+The teamwork-leader plug-in is a **local-only Claude Code product** — runs on user's Mac via launchd-supervised daemon. GHA is not the deployment target; never was. v0.1.7-v0.1.10 used GHA as a measurement *venue* defensibly (stub didn't need credentials), but v0.1.11 real-claude work requires the actual deployment environment.
+
+### Authorized framing for v0.1.11 onwards
+
+| Context | Host class | Tooling |
+|---|---|---|
+| **Measurement** (latency / correctness / SESSION_RESUMED reachability) | **Local user macOS deployment host** (where the daemon actually runs in production) | `tools/measure-*.py` + `tools/measure-*.sh` invoked locally; baton + daemon + claude all local |
+| **Install/syntax verification** (CI regression gate) | GHA macos-14 (or future Linux equivalent if support extends) | `.github/workflows/measure-execution-prevalidation.yml` (renamed conceptually to "install pipeline" per N2); python3 >=3.10 hard gate; plist-render syntax check; daemon.py importable; measurement steps disabled or stubbed |
+
+GHA macos-14 explicitly NOT a measurement reference host for v0.1.11+.
+
+### Field-name & docstring corrections (this dispatch)
+
+Production code field `runner_info.gha_runner_label` renamed to `runner_info.host_label` in:
+- `tools/measure-poll-resumed.py:92-93`
+- `.github/workflows/measure-execution.yml:189` (downstream consumer)
+
+Docstrings updated in:
+- `tools/measure-write-baton.py` (extends "Used by" to mention local orchestration)
+- `tools/patch-plist-python3.py` (clarifies GHA-install-validation-only context)
+
+Workflow `.github/workflows/measure-execution-prevalidation.yml` reframed as "install pipeline" not "measurement pre-validation".
+
+Archived v0.1.9 evidence docs (`docs/archives/measurement.v0.1.9.md`, `docs/archives/PROGRESS.v0.1.9.md`, `docs/specs/measurement-protocol.v0.1.9.md`) are NOT touched — those reference the old `gha_runner_label` key in immutable evidence. Future readers cross-reference via this term (h) for the renamed-key history.
+
+### Unchanged invariants
+
+Same invariants table as §7 (g) "Unchanged invariants" applies; this term (h) is purely framing/naming clarification, no code-behavior changes.
+
+### Cross-references
+
+- CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME: PROGRESS.md `## CCB Activity ### Stage 3` 2026-05-10T~13:30+08:00 entry
+- Source memory: `~/.claude/projects/-Users-HsuTse-ClaudeProject-teamwork-leader/memory/feedback_reference-host-vs-deployment-target.md`
+- §7 (b)-(e) inherited "reference-host" framing (now disambiguated by this term per the table above)

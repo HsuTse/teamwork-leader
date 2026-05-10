@@ -6,8 +6,10 @@ Writes a valid 7-field baton.json with gate_state=BATON_WRITTEN.
 Prints the file's mtime as a float epoch timestamp to stdout.
 
 Used by .github/workflows/measure-execution.yml for both cold-start and
-warm-start measurement loops. The mtime printed is used as T0 (baton-write
-start anchor) for latency computation.
+warm-start measurement loops, and by local measurement orchestration on the
+user's deployment macOS host (per v0.1.11 Charter §AC-3 local-host reframe;
+see auto-resume-daemon-design.md §7 (h)). The mtime printed is used as T0
+(baton-write start anchor) for latency computation.
 
 Usage:
     python3 tools/measure-write-baton.py <baton_path> [--session-id <uuid>]
