@@ -1,17 +1,19 @@
-name: measure-execution-prevalidation — real-claude smoke test (T-2-2 pre-val)
+name: install-pipeline-validation — real-claude install smoke test (v0.1.11 reframed CI-scope-only)
 
-# Throwaway pre-validation workflow to determine if real claude CLI can be
-# installed on GHA macos-14 runners without interactive auth prompts.
+# Install-pipeline validation workflow (v0.1.11 reframed; CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME).
+# Per Charter §Constraints: GHA scope = install/syntax verification only.
+# NOT a measurement workflow — measurement runs on user's local macOS deployment host.
 #
-# Gate decision:
-#   PASS -> proceed to Candidate A (real-claude GHA measurement)
-#   FAIL -> fall back to Candidate B (stub-confirmed; register CCBL-Stage2-T22-stub-fallback)
+# Validates: real claude CLI installs cleanly on GHA macos-14 runners without
+# interactive auth prompts; npm install hardening (B-3 pattern) blocks unsafe upgrades.
+#
+# Originally authored as "T-2-2 pre-validation" for v0.1.10 stub-vs-real selection;
+# retained at v0.1.11 as install-regression CI gate per design.md §7 (h).
 #
 # Bail criterion: any step exits != 0 OR stdout contains /authenticate|login required/i
 # OR npm install step exceeds 4 min.
 #
 # This workflow is intentionally minimal (one job, 5 steps).
-# After gate decision, it will be removed or archived.
 
 on:
   workflow_dispatch:
@@ -37,7 +39,7 @@ jobs:
         id: install_claude
         timeout-minutes: 4
         run: |
-          npm install -g @anthropic-ai/claude-code || echo "INSTALL_FAILED"
+          if ! npm install -g @anthropic-ai/claude-code; then echo "::error::install failed"; exit 1; fi
 
       - name: Check claude binary availability
         run: |

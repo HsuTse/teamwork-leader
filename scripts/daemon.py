@@ -560,12 +560,36 @@ def _run_t5_actor(
                     time.sleep(delay)
                 try:
                     proc = subprocess.Popen(cmd, cwd=project_dir_for_spawn)
-                    # Wait briefly to detect immediate non-zero exit
+                    # Wait up to 30s to detect an immediate non-zero exit.
+                    # Background: real claude --resume on an auth-provisioned host takes
+                    # 8–15s to exit on invalid session_id (Stage 1 AC-1 characterization,
+                    # docs/archives/real-claude-resume-characterization.v0.1.11.md §V2).
+                    # The original 2.0s window was too short — it fired TimeoutExpired,
+                    # set exit_code=0, and wrote SESSION_RESUMED as a false positive
+                    # (FROZEN-DELTA-AUTHORIZED v0.1.11 §7 amendment).
+                    #
+                    # Post-timeout poll loop (28s residual budget after primary wait):
+                    # If TimeoutExpired fires, poll proc.poll() every 0.5s for up to 28s.
+                    # A non-zero exit detected during this window means claude failed later
+                    # (e.g., session-not-found after auth round-trip); raise CalledProcessError
+                    # to enter the T6 retry path.  A zero exit or still-running process at
+                    # poll budget exhaustion is treated as success (expected long-lived session).
                     try:
-                        exit_code = proc.wait(timeout=2.0)
+                        exit_code = proc.wait(timeout=30.0)
                     except subprocess.TimeoutExpired:
-                        # Process still running — treat as success (expected long-lived)
-                        exit_code = 0
+                        # Primary 30s window exhausted — poll for up to 28s more residual.
+                        # Use monotonic deadline to avoid float-accumulation drift on loaded runners.
+                        poll_deadline = time.monotonic() + 28.0
+                        exit_code = None
+                        while time.monotonic() < poll_deadline:
+                            time.sleep(0.5)
+                            poll_result = proc.poll()
+                            if poll_result is not None:
+                                exit_code = poll_result
+                                break
+                        if exit_code is None:
+                            # Process still running after full poll budget — treat as success
+                            exit_code = 0
                     if exit_code != 0:
                         raise subprocess.CalledProcessError(exit_code, cmd)
                     spawn_succeeded = True

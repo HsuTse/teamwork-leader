@@ -2,7 +2,7 @@
 
 > 多 agent PMP 專案編排：TeamLead 統籌 PO/RD/QA/UX/Ad-hoc 角色 PM，透過 stage-gated 流程與三道驗證閘執行專案。
 
-[![version](https://img.shields.io/badge/version-0.1.10-blue.svg)](./.claude-plugin/plugin.json)
+[![version](https://img.shields.io/badge/version-0.1.11-blue.svg)](./.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
 ---
@@ -230,6 +230,7 @@ teamwork-leader/
 - **v0.1.8 measurement-deferral codification**（doc-only）— design.md §7 (a)–(d) shipping constraint codified；anti-scope-creep mandate held end-to-end
 - **v0.1.9 I-023-M1 measurement closure**（self-dogfood）— GHA macos-14 arm64 cold p50=15.5s / warm p50=5.3s（≤30s ship gate satisfied）；FROZEN spec held end-to-end；M-2/M-4 deviation registration discipline；2× mid-stage Opus advisor pattern
 - **v0.1.10 daemon FROZEN-spec deltas + hook hardening D-1/2/3**（2026-05-10）— I-061/I-064/I-065/I-071 closed；hook compound-injection attack surface eliminated；measurement protocol C-4 corrected；AC-9 Python ≥3.10 hard gate；AC-7 real-claude E2E measurement PROVEN-BLOCKED on both host classes → deferred to v0.1.11 per CCB-Heavy revise_charter；production usage signal confirmed (patent-examiner-plugin + BeiliSystem)
+- **v0.1.11 real-claude integration ship**（2026-05-10）— AC-1..AC-6 all delivered (0 demote vs v0.1.10 AC-7 PROVEN-BLOCKED). 3-charter host-class blocker止血 via patch-plist-python3.py workaround; v0.1.12 mandatory HIGH RAID-V11-install-lifecycle-python3-path for structural fix. Stage 3 Phase B local macOS real-launchd E2E: cold 12.099s / warm 11.091s SESSION_RESUMED ≤30s ship gate. Per-task Sonnet review + Stage-close Opus review discipline established (CEO directive). PM dispatch reliability findings transparently disclosed (CCBL-PO-D4 dual deviations + RAID-V12-pm-dispatch-retry-grounding).
 - **首次外部 dogfood**：BeiliSystem PR #30/#34（3 stages, 25 dispatches, 5 real defects caught, 0 false positives, 2026-05-02）
 
 **仍待強化**：
@@ -237,7 +238,7 @@ teamwork-leader/
 - **多 project 校準**：thresholds 仍是 seed values，需 ≥2 unrelated projects evidence 才能進 Phase 4 CGR threshold calibration
 - **N≥2 hard gate**：`long-batched-dispatch-warning`（v0.2.0 候選）僅 1 truncation case，必須 N≥2 才能 ship interruptive guard
 - **CGR（Calibration Governance Review）pending**：需 ≥3 stages clean data after v0.1.3 才啟動 round 1
-- **v0.1.11 carry-forward RAIDs**：RAID-V11-real-claude-integration（sev:HIGH — real-claude/daemon SESSION_RESUMED polling target mismatch）+ RAID-V11-install-lifecycle-python3-path（sev:MED）+ RAID-V11-ccb-token-cost（sev:MED）+ RAID-V11-pm-subagent-disclosure（sev:MED）
+- **v0.1.12 carry-forward RAIDs（8 total）**：RAID-V11-install-lifecycle-python3-path（sev:HIGH MANDATORY — install.py auto-detect python3 ≥3.10 + auto-inject claude binary PATH；escalated from MED）+ RAID-V12-pm-dispatch-retry-grounding（sev:MED）+ RAID-V12-poll-loop-stress-test（sev:MED）+ RAID-V12-measurement-diversity（sev:MED）+ RAID-V11-ccb-token-cost（sev:MED；carry from v0.1.10）+ RAID-V12-cr-drafting-discipline（sev:LOW）+ RAID-V12-restore-prompt-allowlist-doc（sev:LOW）+ RAID-V12-deferred-bookkeeping-pre-tag-mandate（sev:LOW）
 
 ## 文件導引
 
@@ -269,6 +270,7 @@ MIT — 見 [LICENSE](./LICENSE)。
 - [x] v0.1.8 measurement-deferral 形式化（design.md §7 (a)–(d) codification）
 - [x] **v0.1.9 I-023-M1 measurement closure**（GHA macos-14 cold p50=15.5s / warm p50=5.3s ≤30s ship gate）
 - [x] **v0.1.10 daemon FROZEN-spec changes + hook hardening D-1/2/3 + measurement protocol corrections**（2026-05-10）— AC-7 real-claude E2E measurement deferred to v0.1.11 per CCBH-v0.1.10-AC7-DEMOTE-V0.1.11
+- [x] **v0.1.11 real-claude integration ship + 3-charter host-class blocker止血**（2026-05-10）— AC-1..AC-6 all delivered; cold 12.099s / warm 11.091s SESSION_RESUMED on local Mac (≤30s gate); patch-plist-python3.py workaround + v0.1.12 mandatory HIGH structural fix
 - [ ] 收集 ≥2 unrelated projects' evidence → Phase 4 CGR round 1（threshold 校準）
 - [ ] 達 N≥2 hard gate 後評估 v0.2.0 long-batched dispatch interruptive guard
 - [ ] 視需要加入 PM-side adaptive verification depth（目前 sampling 全由 TeamLead 決定）

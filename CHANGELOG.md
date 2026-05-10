@@ -4,6 +4,58 @@ All notable changes to the `/teamwork-leader` plugin documented here. Format fol
 
 <!-- Entry conventions (forward-going `### Notes` plural; ### Note: avoided): see docs/conventions/changelog.md -->
 
+## [0.1.11] — 2026-05-10
+
+### Added
+
+- **AC-1 real-claude `--resume` characterization** — Stage 1 commit bb666c0; V2 root cause (synthetic session_id non-UUID rejected by real claude format validation) + timing-asymmetry discovery (8–15s OAuth init exceeds prior 2.0s timeout window). Doc `docs/archives/real-claude-resume-characterization.v0.1.11.md`.
+- **AC-2 §7 (g-1) FROZEN-DELTA-AUTHORIZED** — Stage 2 commits fd1a7dd + 450727c; daemon T5 `proc.wait(timeout=30.0)` + 28s post-timeout poll loop + `tools/measure-write-baton.py --session-id` + `.github/workflows/measure-execution.yml` session-init step + C-4 timeout 90→120s. Authorized via Opus PlanAudit FROZEN-DELTA-AUTHORIZED v0.1.11 notation in `docs/specs/auto-resume-daemon-design.md §7 (g)`.
+- **AC-3 local macOS host real-claude E2E measurement** — Stage 3 Phase B commits 74706ee + 3a76fd2; cold 12.099s + warm 11.091s SESSION_RESUMED on local user deployment Mac, both ≤30s ship gate. §7 (g-1) primary 30s wait path empirically validated; defensive 28s post-timeout poll loop fallback NOT triggered (carry to v0.1.12 stress-test RAID). Evidence at `docs/specs/v0.1.11-evidence/measurement-real-launchd-local.v0.1.11.md`. AC-3 reframe via CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME (host context: "GHA macos-14 reference host" → "local macOS host real user deployment environment"; design.md §7 (h) FROZEN-DELTA-AUTHORIZED v0.1.11).
+- **AC-4 backtick + $() subshell coverage** — Stage 1 commit 8630889; D-3 `_COMPOUND_OP_RE = r"[;|` + "`" + `]|&&|\|\||\$\("`. Evidence at `docs/security/v0.1.11-hook-hardening.md`.
+- **AC-5 sub_agent_invocations field + Rule 0 extension** — Stage 1 commit d2303a7; `references/dispatch-header.md §Return contract` addendum + TeamLead audit-trail.jsonl persistence + anti-rubber-stamp Rule 0 Step 0.X.
+- **AC-6 SHA256 hook drift verification** — Stage 1 commit 8630889; canonical hook SHA256 committed under `docs/security/`; SessionStart-time warn-only check.
+- **Phase C synthetic measurement evidence** — commit 507f131; N=10 daemon `--self-test-t5` plumbing validity (cold 71ms / warm 72ms p50). Tool `tools/measure-synthetic-t5.py`.
+- **3-charter recurring host-class blocker止血** — v0.1.7 L-3 + v0.1.10 deviation-3 + v0.1.11 Phase B Discovery #2 pattern resolved at workaround layer via `tools/patch-plist-python3.py` apply; structural fix carried to v0.1.12 mandatory HIGH RAID.
+- **CR-V0.1.11-S3-Phase-B-guard-exemption** — first CCB-Heavy CR with §Execution amendment trail post-approve pivot pattern (CCBL-PhaseB-CR-INVALID-PREMISE Discovery #1).
+
+### Changed
+
+- **`.claude-plugin/plugin.json`**: version 0.1.10 → 0.1.11.
+- **`README.md`**: version badge + Roadmap entries for v0.1.11.
+- **`tools/measure-poll-resumed.py` + `.github/workflows/measure-execution.yml`**: rename `runner_info.gha_runner_label` → `host_label` + `gha_runner_arch` → `host_arch` (consistent with local-host reframe).
+- **`.github/workflows/measure-execution-prevalidation.yml`**: reframed `name:` + head comments as `install-pipeline-validation` (CI-scope-only, not measurement; per CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME).
+- **`tools/measure-write-baton.py` + `tools/patch-plist-python3.py`**: docstring extensions for v0.1.11 framing.
+- **Stage 3 close Opus full review APPROVED_WITH_REVISIONS**: 5 revisions applied (CR amendment trail / ccb-log sync / Lessons Learned consolidation + 2 minor).
+- **`tools/measure-synthetic-t5.py`**: `_pct()` redundant sort dedup (Sonnet PWM follow-up).
+
+### Why
+
+AC-1+4+5+6 (Stage 1) + AC-2 (Stage 2) + AC-3 (Stage 3) all delivered via three-stage decomposition + 3-Phase Stage 3 (C synthetic / B real-launchd / D ProjectClose). 0 demote (vs v0.1.10 AC-7 PROVEN-BLOCKED demote). 3-charter host-class blocker止血 via patch-plist workaround.
+
+**Per-task Sonnet review + Stage-close Opus review discipline established** — CEO directive 2026-05-10 codified in `feedback_per-task-sonnet-stage-opus-review.md`; OVERRIDES Auto Mode reviewer-cadence-disable hard guard.
+
+**Production usage signal**: continuing usage at patent-examiner-plugin + BeiliSystem; plug-in's local-only Mac product framing now clearly established (CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME).
+
+### Migration
+
+None breaking; v0.1.11 is purely additive. Users on v0.1.10 with Layer-2-degraded install: v0.1.11 still falls back to Layer 2 if launchd PATH issues persist; v0.1.12 install.py upgrade will auto-handle.
+
+### Notes
+
+- **Stage 3 PM dispatch reliability findings (transparently disclosed)**:
+  - **CCBL-Stage3-v0.1.11-PO-D4-SCHEMA-DEVIATION**: PO V0.1.11-S3-D4 first return missed 5 mandatory schema fields per dispatch-header.md §Return contract; substantive work in commit 101b677 verified independently correct (5/5 sub-tasks via TeamLead Anti-rubber-stamp + Sonnet step-review PASS_WITH_MINOR).
+  - **CCBL-Stage3-v0.1.11-PO-D4-RETRY-HALLUCINATION**: schema retry dispatch produced hallucinated content (referenced nonexistent files; fabricated AC sub-tasks). Decision: REJECT retry; ACCEPT 101b677 substantive work; register both deviations + carry RAID-V12-pm-dispatch-retry-grounding (PM retry prompts must require `git show` grounding before re-emit).
+- **§7 (g-1) coverage qualifier**: primary 30s wait path empirically validated (real claude exits 12.099s/11.091s within window); 28s post-timeout poll loop fallback NOT triggered (defensive layer for hypothetical 30–58s exits; v0.1.12 stress-test carry).
+- **v0.1.12 carry-forward RAIDs (8 total)**:
+  1. RAID-V11-install-lifecycle-python3-path (sev:HIGH MANDATORY; escalated from v0.1.12 carry-candidate per CCBL-Stage3-v0.1.11-PhaseB-PYTHON-PATH-WORKAROUND Discovery #2 empirical refutation of "local launchd PATH inheritance is not a problem" assumption)
+  2. RAID-V12-pm-dispatch-retry-grounding (sev:MED; PM agent retry prompts must require git-show + verbatim diff grounding)
+  3. RAID-V12-poll-loop-stress-test (sev:MED; stress-test session for §7 (g-1) post-timeout 28s poll loop fallback path)
+  4. RAID-V12-measurement-diversity (sev:MED; sample ≥3 distinct sessions varied jsonl size for latency distribution)
+  5. RAID-V12-cr-drafting-discipline (sev:LOW; amend dispatch-header.md / ccb-heavy.md.tpl PO drafting guideline)
+  6. RAID-V12-restore-prompt-allowlist-doc (sev:LOW; README warning section for em-dash/curly-quote/NBSP tripwires)
+  7. RAID-V12-deferred-bookkeeping-pre-tag-mandate (sev:LOW; pmp-ccb.md amendment "batch sync MUST complete before git tag")
+  8. RAID-V11-ccb-token-cost (sev:MED; carry from v0.1.10; CCB ceremony token-cost friction)
+
 ## [0.1.10] — 2026-05-10
 
 ### Added

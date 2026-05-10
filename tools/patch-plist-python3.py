@@ -24,6 +24,12 @@ Usage:
 
 Exit code 0: plist patched successfully.
 Exit code 1: plist not found or ProgramArguments in unexpected format.
+
+Note (v0.1.11): This script supports the GHA install-syntax verification context
+only — it is NOT involved in measurement. Per v0.1.11 Charter §AC-3 reframe
+(CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME), measurement runs on the user's local
+macOS deployment host where launchd's PATH inheritance is not a problem
+(user-installed python3 >=3.10 is on the standard PATH).
 """
 
 import plistlib

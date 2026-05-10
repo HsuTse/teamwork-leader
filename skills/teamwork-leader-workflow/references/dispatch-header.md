@@ -74,6 +74,8 @@ You **MUST NOT** Task-dispatch sub-agents UNLESS:
 - TeamLead approves at PlanAudit
 - Counted toward `parallel_pm_limit` knob
 
+See §Return contract addendum (v0.1.11) for `sub_agent_invocations` declaration field.
+
 ### Branch check (RD PM only)
 
 Before any code edit, run:
@@ -225,6 +227,53 @@ TeamLead has **already minted** a `dispatch_id` for this dispatch (format `S<sta
 6. Decide next dispatch (or stage gate / CEO check-in)
 
 You will not see the verification result. Trust that TeamLead will catch sloppy returns and re-dispatch.
+
+---
+
+## Return contract addendum (v0.1.11)
+
+> FROZEN-DELTA-AUTHORIZED v0.1.11 — sections added: §Return contract addendum (v0.1.11) + §Sub-agent dispatch rules cross-ref. APPEND-only per CCBL-Stage1-v0.1.10-AC4-PLACEMENT precedent.
+
+### `sub_agent_invocations` field
+
+Declares every sub-agent dispatched by this PM during the current dispatch. **Required for new dispatches** (emit empty array `[]` if no sub-agents were dispatched); **OPTIONAL for legacy in-flight dispatches** (mirrors `meta` block pattern at line 130).
+
+Append as a top-level field in the return JSON:
+
+```json
+"sub_agent_invocations": [
+  {
+    "subagent_type": "<agent role or model tier, e.g. 'general-purpose' | 'opus-reviewer' | 'rd-pm' | 'qa-pm'>",
+    "scope": "<one-line description of what this sub-agent was asked to do>",
+    "justification": "<why dispatch was necessary — must reference the parallel-dispatch declaration in the approved plan>",
+    "planaudit_approval_ref": "<PROGRESS.md anchor to the Stage History ### Stage X PlanAudit that approved this dispatch, or null if unapproved>"
+  }
+]
+```
+
+#### Field schema
+
+| Sub-field | Type | Required | Notes |
+|---|---|---|---|
+| `subagent_type` | string | yes | Must match Hard Rule 8 PM agent list or `"general-purpose"`. Enum: `"general-purpose"`, `"opus-reviewer"`, `"rd-pm"`, `"po-pm"`, `"qa-pm"`, `"ux-pm"`, `"ad-hoc-pm"` |
+| `scope` | string | yes | One-line description (≤120 chars) of the sub-agent's declared task |
+| `justification` | string | yes | References the parallel-dispatch declaration approved in plan; required even when `planaudit_approval_ref` is non-null |
+| `planaudit_approval_ref` | string or null | yes | Non-null value should reference a `PROGRESS.md ## Stage History ### Stage X PlanAudit` anchor (e.g., `"PROGRESS.md#stage-1-planaudit"`). Null = unapproved dispatch (triggers Rule 0.X Trigger B) |
+
+#### Validation rules
+
+(a) `subagent_type` value MUST be one of the enum values listed above (matching Hard Rule 8 PM agent list) or `"general-purpose"`.
+
+(b) `planaudit_approval_ref` when non-null SHOULD reference a `PROGRESS.md ## Stage History ### Stage X PlanAudit` anchor. TeamLead verifies the referenced PlanAudit approved the parallel-dispatch pattern.
+
+#### Persistence
+
+- **`docs/sub-agent-invocations.jsonl`**: full 4-field array per dispatch; schema `{dispatch_id, parent_pm, sub_agent_invocations: [...]}`. See that file for live data.
+- **`docs/audit-trail.jsonl`**: v0.1.11+ rows include `sub_agent_invocations_count` integer column (count of entries in the array; 0 for no sub-agents; `null` for legacy rows). Existing rows are treated as legacy and are NOT backfilled.
+
+#### Legacy exemption
+
+Dispatches started before v0.1.11 rollout (i.e., already in-flight at time of this addendum landing) MAY omit `sub_agent_invocations`. TeamLead logs `sub_agent_invocations: legacy_exempt` in `audit-trail.jsonl` notes for such dispatches. This mirrors the `meta` field legacy-exemption pattern at line 130.
 
 ---
 

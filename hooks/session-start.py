@@ -234,6 +234,65 @@ def _sha256_file(path: str) -> Optional[str]:
     return None
 
 
+def _check_hook_integrity() -> None:
+    """AC-6: warn-only SHA256 drift check for pretooluse_guard.py.
+
+    Reads canonical hash from docs/security/v0.1.11-hook-hardening.md §hook-integrity
+    (line matching 'sha256: <hex64>'). If the live hook's digest differs, emits a
+    one-line warning to stderr. Silent on: missing evidence file, missing sha256 line,
+    missing live hook. Does NOT block — warn-only per Plan A.
+
+    Spec: v0.1.11 AC-6, docs/security/v0.1.11-hook-hardening.md §hook-integrity.
+    """
+    # Locate evidence file relative to plugin root
+    evidence_path = os.path.join(
+        _plugin_root(), "..", "docs", "security", "v0.1.11-hook-hardening.md"
+    )
+    evidence_path = os.path.normpath(evidence_path)
+
+    # Allow test override via env var (used by T10/T11 smoke tests)
+    override_hash = os.environ.get("TEAMLEAD_HOOK_INTEGRITY_OVERRIDE_HASH")
+    if override_hash is not None:
+        # Test mode: treat override as the "committed" hash for comparison
+        committed_hash: Optional[str] = override_hash if len(override_hash) == 64 else None
+    else:
+        # Parse sha256: <hex> line from evidence file
+        committed_hash = None
+        try:
+            with open(evidence_path, "r", encoding="utf-8") as fh:
+                _SHA256_PREFIX = "sha256: "
+                _SHA256_LINE_LEN = len(_SHA256_PREFIX) + 64  # 8 + 64 hex chars
+                for line in fh:
+                    line = line.strip()
+                    if line.startswith(_SHA256_PREFIX) and len(line) == _SHA256_LINE_LEN:
+                        committed_hash = line[len(_SHA256_PREFIX):]
+                        break
+        except OSError:
+            # Evidence file absent (e.g., first install before v0.1.11 committed) — skip
+            return
+
+    if committed_hash is None:
+        # No sha256 line found — silent skip
+        return
+
+    hook_path = os.path.expanduser("~/.claude/hooks/pretooluse_guard.py")
+    live_hash = _sha256_file(hook_path)
+    if live_hash is None:
+        # Hook not installed — silent skip
+        return
+
+    if live_hash != committed_hash:
+        sys.stderr.write(
+            f"[hook-integrity] WARNING: pretooluse_guard.py SHA256 mismatch — "
+            f"expected={committed_hash[:16]}... actual={live_hash[:16]}...\n"
+            f"[hook-integrity] Full expected: {committed_hash}\n"
+            f"[hook-integrity] Full actual:   {live_hash}\n"
+            f"[hook-integrity] Hook may have drifted from v0.1.11 canonical version. "
+            f"Review ~/.claude/hooks/pretooluse_guard.py.\n"
+        )
+        sys.stderr.flush()
+
+
 def _extract_last_action_iso(progress_md_path: str) -> Optional[str]:
     """Extract ISO timestamp from first '## Last Action:' line in PROGRESS.md.
 
@@ -516,7 +575,10 @@ def _detect_and_route(project_dir: str) -> None:
     2. Read baton + check gate_state; if not BATON_WRITTEN → treat as no-baton
     3. Validate schema; if missing required fields → ABORTED
     4. Re-validate 4 fields → POST_RESUME_VERIFIED or ABORTED
+
+    AC-6: hook integrity check runs first (warn-only; never blocks routing).
     """
+    _check_hook_integrity()
     baton_path = _baton_path(project_dir)
     baton = _read_baton(baton_path)
 
@@ -564,8 +626,13 @@ def _test_mode_no_baton() -> None:
     """Test: simulate ARMED path without needing $CLAUDE_PROJECT_DIR.
 
     Uses a temporary directory that looks like a project root.
+    AC-6: also exercises _check_hook_integrity() so T10/T11 can validate the
+    warn-only SHA256 drift check via the TEAMLEAD_HOOK_INTEGRITY_OVERRIDE_HASH env var.
     """
     import tempfile
+
+    # AC-6: run integrity check (warn-only; fires before routing in production too)
+    _check_hook_integrity()
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         # Simulate ARMED path

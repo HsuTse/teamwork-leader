@@ -963,3 +963,120 @@ The following four terms collectively define the v0.1.7 → v0.1.9 measurement d
 - Headroom = 48 % (14.5 s absolute)
 - v0.1.10 charter re-validates this budget on local macOS + GHA macos-14 dual-host per AC-7 / AC-8; updated dual-host figures recorded in `docs/archives/measurement-real-claude.v0.1.10.md` §interpretation (post-Stage-2 EXECUTING). If either host post-v0.1.10 measurement exceeds 52 % utilization → flag as RAID-I for budget-erosion review.
 - Charter-clarification: AC-8 anchor `§reliability budget` realized as this §7 term (f) per CCBL-Stage2-v0.1.10-T24-ANCHOR (semantic equivalence; FROZEN-spec untouched — additive term pattern from terms (a)-(e) per v0.1.8 amendment).
+
+**(g) v0.1.11 FROZEN-DELTA-AUTHORIZED amendments — daemon T5 timeout extension + baton session_id fix (added 2026-05-10).**
+
+<!-- ccb: clarify 2026-05-10 — FROZEN-DELTA-AUTHORIZED v0.1.11: daemon T5 proc.wait timeout 2.0→30.0s + post-timeout poll loop; measure-write-baton.py --session-id; workflow session-init step; C-4 poll timeout 90→120s; all amendments additive; §1 transition table and §2 baton schema unchanged -->
+
+**Authority**: v0.1.11 charter (`feat/v0.1.11-real-claude-integration`), Stage 2 EXECUTING dispatch V0.1.11-S2-EX1, CEO Option B acceptance 2026-05-10T~12:15+08:00. This term is ADDITIVE — it does not modify §1–§6 or §7 terms (a)–(f).
+
+### Background: real-claude resume characterization (Stage 1 AC-1 evidence)
+
+Stage 1 AC-1 characterization (`docs/archives/real-claude-resume-characterization.v0.1.11.md`) established two V2-confirmed root causes:
+
+1. **Non-UUID session_id**: the measurement baton hardcoded `"measurement-run-synthetic-session"`, which is not a UUID. Real claude 2.1.112+ rejects it immediately on format validation with exit_code=1.
+
+2. **Timing asymmetry across host classes**: real claude --resume on an auth-provisioned host takes 8–15 seconds to exit (cold-start OAuth/API initialization overhead) before returning exit_code=1 for a not-found session. The daemon's prior `proc.wait(timeout=2.0)` fired `TimeoutExpired` within this window, set `exit_code=0`, and wrote `gate_state=SESSION_RESUMED` as a **false positive**. On GHA (no auth), claude exits in < 2s; the daemon correctly sees exit_code=1 and enters T6 retry → ABORTED.
+
+### Authorized amendments (Option B selected, CEO Gate 2026-05-10)
+
+The following code changes are FROZEN-DELTA-AUTHORIZED for v0.1.11. No §1 state-machine transitions, no §2 baton schema fields, and no §3 gate.lock semantics are modified. WHO writes `SESSION_RESUMED` is unchanged: daemon.py remains the exclusive author.
+
+**(g-1) daemon.py T5 timeout: 2.0 → 30.0s primary wait + 28s post-timeout poll loop.**
+
+- `proc.wait(timeout=2.0)` extended to `proc.wait(timeout=30.0)`.
+- After `TimeoutExpired`: poll `proc.poll()` every 0.5s for up to 28s residual budget.
+- Non-zero exit detected during poll → raise `CalledProcessError` → enter T6 retry path.
+- Process still running OR zero exit at poll budget exhaustion → `exit_code=0` → success path (SESSION_RESUMED written by daemon, consistent with §1 T5 semantics).
+- Rationale: 30s primary + 28s poll = 58s total observation window. Stage 1 characterization observed 8–15s exit on local-auth host. 30s primary window covers this range without polling overhead; 28s poll provides residual coverage for edge cases.
+
+**(g-2) tools/measure-write-baton.py: add --session-id <uuid> + local-glob fallback.**
+
+- New `--session-id <uuid>` argparse argument. When supplied, baton `session_id` field uses the provided UUID instead of the hardcoded synthetic literal.
+- When omitted: script discovers the most-recently-modified `.jsonl` file under `~/.claude/projects/<encoded_project_dir>/` and uses its stem (the UUID filename without `.jsonl` extension) as session_id.
+- Legacy fallback: when no `.jsonl` files exist (GHA first-run, fresh host), falls back to `"measurement-run-synthetic-session"` for backward compatibility.
+- `<encoded_project_dir>` is `CLAUDE_PROJECT_DIR` with path separators replaced by `-`, matching Claude Code's session file naming convention.
+
+**(g-3) .github/workflows/measure-execution.yml: session-init step + baton pass-through + C-4 timeout 90→120s.**
+
+- New `session_init` step runs `claude -p 'Session init for measurement.' --output-format json` before C-2/W-2 baton writes. Parses `session_id` from JSON output; exports `MEASUREMENT_SESSION_ID` env.
+- On GHA (no auth), this step exits non-zero; `MEASUREMENT_SESSION_ID` is left empty and the workflow continues. The local-glob fallback in measure-write-baton.py handles the empty case.
+- C-2 and W-2 baton write steps: pass `--session-id "$MEASUREMENT_SESSION_ID"` to measure-write-baton.py (using shell conditional expansion `${MEASUREMENT_SESSION_ID:+--session-id "$MEASUREMENT_SESSION_ID"}` so the flag is omitted when empty).
+- C-4 poll timeout increased from 90s to 120s to accommodate the 30s daemon primary wait window. Warm-start (W-3) timeout unchanged at 60s (warm daemon already running, no ThrottleInterval overhead; 30s window fits within 60s budget).
+- `Install real claude CLI` step: hardened from `npm install -g ...` to `if ! npm install -g ...; then echo "::error::..."; exit 1; fi` (RAID-V11-workflow-install-safety sev:MED, bundled as < 5 kT estimate satisfied).
+
+### Unchanged invariants
+
+The following §1 / §2 / §4 design decisions are NOT modified by this term:
+
+| Invariant | Value | Source |
+|---|---|---|
+| WHO writes SESSION_RESUMED | daemon.py exclusively, line 606 | §1 T5, this term (g-1) |
+| SESSION_RESUMED write condition | spawn_succeeded=True after wait/poll | §1 T5 state machine |
+| Baton schema required fields | 7 fields (session_id, prior_pause_commit, branch, last_action_iso, progress_md_anchor, restore_prompt, auto_mode_resumed) | §2 baton schema |
+| gate_state field presence | BATON_WRITTEN → SESSION_RESUMED | §1 §2, unchanged |
+| T6 retry budget | T6_MAX_RETRIES=3, backoff 1s/4s/16s | §4 step 11, unchanged |
+| Auto-Mode-OFF default | auto_mode_resumed: false (frozen) | §5 charter invariant |
+| gate.lock protocol | acquire before T5, release in finally | §3, unchanged |
+
+### Cross-references
+
+- Stage 1 AC-1 characterization: `docs/archives/real-claude-resume-characterization.v0.1.11.md`
+- V2 root cause: §V2 (non-UUID format rejection), §Critical timing analysis (8–15s exit range)
+- CEO Option B acceptance: PROGRESS.md `## CEO Gate Log` 2026-05-10T~12:15+08:00 entry
+- RAID-V11-S1-daemon-timing-asymmetry: sev:HIGH → sev:LOW post-g-1 implementation
+- RAID-V11-workflow-install-safety: sev:MED → closed (bundled in this dispatch per < 5 kT estimate)
+
+**(h) v0.1.11 Stage 3 reference-host-vs-deployment-target framing clarification (added 2026-05-10).**
+
+<!-- ccb: clarify 2026-05-10 — FROZEN-DELTA-AUTHORIZED v0.1.11: Charter §AC-3 reframe via CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME; measurement context = local user deployment macOS host; GHA scope reduced to install/syntax verification only -->
+
+**Authority**: v0.1.11 charter (`feat/v0.1.11-real-claude-integration`), Stage 3 PLANNING dispatch V0.1.11-S3-D1, CEO scope challenge 2026-05-10T~13:00+08:00 → CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME registration 2026-05-10T~13:30+08:00. This term is ADDITIVE — it does not modify §1–§6 or §7 terms (a)–(g). It clarifies the HOST framing inherited from §7 (b)–(e) which used "non-guarded reference host" + GHA macos-14 substitution defensibly for stub-claude measurement.
+
+### Background: inherited GHA-as-reference-host framing
+
+v0.1.7 §7 (c) established a "reference-host requirement" with GHA macos-14 explicitly named as an acceptable substitute (see term (c) clauses (i)-(iv)). v0.1.9 §7 (e) executed I-023-M1 measurement on GHA per this clause. v0.1.10 §7 (f) extended to dual-host (local + GHA) per AC-7/AC-8. v0.1.11 inherited this framing into AC-3 (originally written "GHA macos-14 reference host").
+
+This framing was defensible for stub-claude measurement: the stub binary (`tools/claude-stub.sh`) requires no credentials, runs identically on GHA and local, gives reproducible/shared baselines. Real-claude integration (v0.1.11) breaks the framing.
+
+### Reframe rationale
+
+Real `claude --resume <uuid>` requires:
+- User-bound OAuth/credentials state in `~/.claude/` keychain (not transferable to ephemeral GHA runners)
+- Local session `.jsonl` files in `~/.claude/projects/<encoded_path>/` (not present on GHA fresh checkouts)
+- Local-state lookup semantics (not server-fetched session resolution)
+
+The teamwork-leader plug-in is a **local-only Claude Code product** — runs on user's Mac via launchd-supervised daemon. GHA is not the deployment target; never was. v0.1.7-v0.1.10 used GHA as a measurement *venue* defensibly (stub didn't need credentials), but v0.1.11 real-claude work requires the actual deployment environment.
+
+### Authorized framing for v0.1.11 onwards
+
+| Context | Host class | Tooling |
+|---|---|---|
+| **Measurement** (latency / correctness / SESSION_RESUMED reachability) | **Local user macOS deployment host** (where the daemon actually runs in production) | `tools/measure-*.py` + `tools/measure-*.sh` invoked locally; baton + daemon + claude all local |
+| **Install/syntax verification** (CI regression gate) | GHA macos-14 (or future Linux equivalent if support extends) | `.github/workflows/measure-execution-prevalidation.yml` (renamed conceptually to "install pipeline" per N2); python3 >=3.10 hard gate; plist-render syntax check; daemon.py importable; measurement steps disabled or stubbed |
+
+GHA macos-14 explicitly NOT a measurement reference host for v0.1.11+.
+
+### Field-name & docstring corrections (this dispatch)
+
+Production code field `runner_info.gha_runner_label` renamed to `runner_info.host_label` in:
+- `tools/measure-poll-resumed.py:92-93`
+- `.github/workflows/measure-execution.yml:189` (downstream consumer)
+
+Docstrings updated in:
+- `tools/measure-write-baton.py` (extends "Used by" to mention local orchestration)
+- `tools/patch-plist-python3.py` (clarifies GHA-install-validation-only context)
+
+Workflow `.github/workflows/measure-execution-prevalidation.yml` reframed as "install pipeline" not "measurement pre-validation".
+
+Archived v0.1.9 evidence docs (`docs/archives/measurement.v0.1.9.md`, `docs/archives/PROGRESS.v0.1.9.md`, `docs/specs/measurement-protocol.v0.1.9.md`) are NOT touched — those reference the old `gha_runner_label` key in immutable evidence. Future readers cross-reference via this term (h) for the renamed-key history.
+
+### Unchanged invariants
+
+Same invariants table as §7 (g) "Unchanged invariants" applies; this term (h) is purely framing/naming clarification, no code-behavior changes.
+
+### Cross-references
+
+- CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME: PROGRESS.md `## CCB Activity ### Stage 3` 2026-05-10T~13:30+08:00 entry
+- Source memory: `~/.claude/projects/-Users-HsuTse-ClaudeProject-teamwork-leader/memory/feedback_reference-host-vs-deployment-target.md`
+- §7 (b)-(e) inherited "reference-host" framing (now disambiguated by this term per the table above)

@@ -89,8 +89,8 @@ def main() -> None:
         "runner_info": {
             "os": "macOS 14",
             "arch": "arm64",
-            "gha_runner_label": "macos-14",
-            "gha_runner_arch": "ARM64",
+            "host_label": "macos-14",
+            "host_arch": "ARM64",
         },
     }
     print(json.dumps(result))

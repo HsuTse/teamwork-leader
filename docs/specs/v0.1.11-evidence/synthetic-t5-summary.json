@@ -1,0 +1,21 @@
+{
+  "iterations": 10,
+  "cold": {
+    "p50": 0.071,
+    "p95": 0.071,
+    "max": 0.071,
+    "n": 1
+  },
+  "warm": {
+    "p50": 0.072,
+    "p95": 0.078,
+    "max": 0.078,
+    "n": 9
+  },
+  "all_pass": true,
+  "test_mode": "synthetic_self_test_t5",
+  "deviation_from_real_e2e": "test_mode=True skips real claude spawn, git stash, and \u00a77(g-1) 30s primary wait + 28s poll loop. Validates allowlist + baton-update plumbing only. See measurement-protocol.v0.1.9.md deviation-1 pattern.",
+  "host": "Darwin arm64",
+  "daemon_commit_sha": "22d1423a12191758d24b306d0fb6e559bf031c93",
+  "timestamp_iso": "2026-05-10T05:55:22Z"
+}
