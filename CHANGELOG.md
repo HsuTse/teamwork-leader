@@ -4,6 +4,36 @@ All notable changes to the `/teamwork-leader` plugin documented here. Format fol
 
 <!-- Entry conventions (forward-going `### Notes` plural; ### Note: avoided): see docs/conventions/changelog.md -->
 
+## [0.1.10] — 2026-05-10
+
+### Added
+
+- **Daemon FROZEN-spec deltas** — `scripts/daemon.py` + `docs/specs/auto-resume-daemon-design.md` updated for I-061 (array structure cosmetic-as-doc per v0.1.7 classification), I-064 (single-line format normalization), I-065 (argparse mutually_exclusive_group), I-071 (post-hoc TeamLead-coined keys → canonical naming). All changes authorized as FROZEN-DELTA per Opus PlanAudit explicit notation.
+- **Hook hardening D-1+D-2+D-3** — `~/.claude/hooks/pretooluse_guard.py` (out-of-tree): D-1 opaque ask-reason fix (first ~120 chars of cmd in reason string); D-2 open-path-branch collapsed to exact plist filename; D-3 compound-operator detection (`;`/`&&`/`||`/`|` strip before whitelist exception fires). In-repo evidence at `docs/security/v0.1.10-hook-hardening.md` (151 lines; 6 sections; FN-1/FN-2/FN-3 attack scenarios + before/after regex + smoke transcript).
+- **`docs/specs/measurement-protocol.v0.1.10.md`** — corrected C-4 timeout 60→90s (engineering rationale: ThrottleInterval 10s + cold-start launchd overhead; v0.1.9 spec text was copy-paste error; v0.1.9 actual runs used 90s and are evidence-truth). Includes `§methodology-deviations` with deviation-3 (local PROVEN-UNAVAILABLE env-class) + deviation-4 (GHA PROVEN-INTEGRATION-GAP).
+- **AC-9 Python ≥3.10 hard gate** — `.github/workflows/measure-execution.yml` lines 59-62: `python3 --version` assert step added; env-class hard gate at workflow level.
+- **deviation-3** (CCBL-Stage2-v0.1.10-T21-LOCAL-BLOCKED) — `measurement-protocol.v0.1.10.md §methodology-deviations`: T-2-1 BLOCKED by system python3 3.9.6 on macOS 15.3 (plist `/usr/bin/python3`; PEP 604 syntax crash) + launchctl bootout/bootstrap hard-denied by hook after repeated approved ask-prompts (D-3 escalation behavior). AC-7(i) status: PROVEN-UNAVAILABLE on local macOS 15.3 host class.
+- **deviation-4** (CCBL-Stage2-v0.1.10-T22-GHA-INTEGRATION-GAP) — `measurement-protocol.v0.1.10.md §methodology-deviations` + `docs/archives/measurement-real-claude-gha.v0.1.10.md` (151 lines, 4 hypothesis vectors): GHA run 25532761179 Candidate A real-claude path — install-layer PASS (claude 2.1.133 installed per cold cycle ~13s) but 10/10 cold + 10/10 warm SESSION_RESUMED never reached. Root cause: daemon polling target designed against stub-claude artifact format; does not match what real claude produces on `--resume`. AC-7(ii) status: PROVEN-INTEGRATION-GAP.
+- **PM-discipline pre-emit `meta` integer guard table** — `skills/teamwork-leader-workflow/agents/po-pm.md`: guard table with 5 int + 2 enum + 1 bool fields; closes RAID-I-SCHEMA-1 (PO meta integer self-check).
+- **`docs/specs/auto-resume-daemon-design.md §7 term (f)`** — cold-start reliability budget: cold p50=15.5s / 30s gate = 52% utilization / 48% headroom; cross-referenced to measurement archive and measurement-protocol.v0.1.10.md. AC-8 realized as §7 term (f) per CCBL-Stage2-v0.1.10-T24-ANCHOR.
+
+### Changed
+
+- **PROGRESS.md state machine** — ESCALATED → REPORTING via CCB-Heavy `revise_charter` (CCBH-v0.1.10-AC7-DEMOTE-V0.1.11; CEO verb=approve 2026-05-10T09:03:41+08:00). Stage 2 closes PARTIAL via CCB-Heavy approve route.
+- **Charter §APPENDED 2026-05-10** (CCBH-v0.1.10-AC7-DEMOTE-V0.1.11) — AC-7 demoted from v0.1.10 must-have to v0.1.11-deferred. AC-1..AC-6 + AC-8 + AC-9 + AC-10 all met.
+
+### Why
+
+AC-7 (real-claude end-to-end measurement) PROVEN-BLOCKED on both host classes with comprehensive empirical proof: local PROVEN-UNAVAILABLE env-class (system python3 3.9 on macOS 15.3 + hook hard-deny escalation behavior) + GHA PROVEN-INTEGRATION-GAP (10/10 cold + 10/10 warm SESSION_RESUMED never reached because daemon's polling target was implicitly designed against stub-claude artifact format). This is a v0.1.7 daemon-design assumption that surfaced at v0.1.10's first real-claude end-to-end attempt. CCB-Heavy `revise_charter` demoted AC-7 to v0.1.11; release proceeds with what's done. Production usage signal (patent-examiner-plugin + BeiliSystem) acknowledged as real-world adoption beyond self-dogfood. 5 v0.1.11 carry-forward RAIDs registered: RAID-V11-real-claude-integration (HIGH — gating prerequisite for AC-7 retry) + RAID-V11-install-lifecycle-python3-path (MED) + RAID-V11-ccb-token-cost (MED, NEW production feedback) + RAID-V11-pm-subagent-disclosure (MED, NEW production feedback) + **RAID-SEC-V11-backtick-subshell-injection** (MED, NEW from Phase C Ad-hoc Security PM LessonsLearned introspection — D-3 `_COMPOUND_OP_RE` regex doesn't cover backtick `` ` `` or `$()` subshell forms).
+
+### Migration
+
+`scripts/daemon.py` `_enter_aborted` failure_message normalized to single-line space-delimited key=value per I-064 — observable contract change for downstream parsers reading `last-resume-failure.txt`: pre-v0.1.10 emitted multi-line `transition: T7\nreason: ...\nsuggested_action: ...` with `stash_ref:` only when `last-stash.txt` was present; v0.1.10 emits `transition=T7 reason=... suggested_action=... stash_ref=<value>` always (empty value when stash file absent). Format change is intended (I-064 normalization per `design.md §5 lines 701-714`); always-present-empty for `stash_ref` is a side effect — downstream `lib/notifier.py` parsers should treat `stash_ref=` (empty) and `stash_ref=<path>` as functionally equivalent. Hook hardening (D-1+D-2+D-3) is out-of-tree at `~/.claude/hooks/pretooluse_guard.py`; in-repo evidence only.
+
+### Notes
+
+- **v0.1.11 carry-forward RAIDs (5 total)**: RAID-V11-real-claude-integration (sev:HIGH — blocks all real-claude measurement) + RAID-V11-install-lifecycle-python3-path (sev:MED — plist `{{PYTHON3_PATH}}` substitution) + RAID-V11-ccb-token-cost (sev:MED — CCB ceremony token-cost friction from production usage) + RAID-V11-pm-subagent-disclosure (sev:MED — return contract `sub_agent_invocations` field gap) + **RAID-SEC-V11-backtick-subshell-injection** (sev:MED, NEW — D-3 regex extends to backtick + `$()` in v0.1.11; compounds with PM-subagent-disclosure for security-class enforcement gap).
+
 ## [0.1.9] — 2026-05-08
 
 ### Added

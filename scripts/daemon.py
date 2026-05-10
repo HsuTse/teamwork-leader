@@ -35,9 +35,11 @@ POLL_INTERVAL_SECONDS: float = 5.0  # design.md line 276
 # T6 retry constants (design.md lines 135 Q3 resolution, line 398)
 T6_MAX_RETRIES: int = 3
 # Backoff delays BEFORE each retry attempt (index = attempt number 0,1,2).
-# I-061: T6_BACKOFF_SECONDS[0] (1.0s) is structurally dead — the loop guard
-# "if attempt > 0" means the first attempt (attempt=0) never sleeps.
-# The value is retained for index-symmetry clarity; refactor deferred to v0.1.8+.
+# I-061: T6_BACKOFF_SECONDS[0] (1.0s) is an intentional index-symmetry placeholder.
+# The loop guard "if attempt > 0" at line 556 ensures attempt 0 spawns immediately
+# without sleeping — index 0 is therefore never read at runtime.  The value is
+# preserved here to maintain 1-indexed parity with design.md §4 step 11 retry table
+# (1s / 4s / 16s), making the progression self-documenting even though [0] is dead.
 T6_BACKOFF_SECONDS: list[float] = [1.0, 4.0, 16.0]
 T6_BACKOFF_SECONDS_TEST: list[float] = [0.001, 0.001, 0.001]  # truncated for --self-test-t6-exhaust
 
@@ -192,20 +194,19 @@ def _enter_aborted(
     # - suggested operator action
     # - cross-ref to stash ref if last-stash.txt present
     last_stash_path = os.path.join(watch_dir, ".teamlead", "last-stash.txt")
-    stash_ref_line = ""
+    stash_ref = ""
     try:
         with open(last_stash_path, encoding="utf-8") as fh:
             stash_ref = fh.read().strip()
-        if stash_ref:
-            stash_ref_line = f"\nstash_ref: {stash_ref}"
     except FileNotFoundError:
         pass
 
+    # Single-line space-delimited key=value per lib/notifier.py --notify contract
+    # (design.md §5 lines 701-714). ISO timestamp is prepended by notifier internally.
     failure_message = (
-        f"transition: T7\n"
-        f"reason: {reason}\n"
-        f"suggested_action: Check daemon logs; re-trigger by re-writing baton.json with gate_state=BATON_WRITTEN"
-        f"{stash_ref_line}"
+        f"transition=T7 reason={reason}"
+        f" suggested_action=check-daemon-logs-re-trigger-baton-BATON_WRITTEN"
+        f" stash_ref={stash_ref}"
     )
 
     print(
@@ -214,10 +215,6 @@ def _enter_aborted(
     )
 
     # (a) Write last-resume-failure.txt via lib/notifier.py subprocess.
-    # I-064: design.md top-level (line 526) describes a single-line key=value format;
-    # this implementation emits a multi-line "transition: T7\nreason: ...\n..." format
-    # per design.md §lines 526-536 detail spec.  The discrepancy is cosmetic (operators
-    # can parse either); aligning to strict single-line is deferred to v0.1.8+ refactor.
     if test_mode:
         # test-mode: write to watch_dir/.teamlead/ (not production CLAUDE_PROJECT_DIR)
         # use --test-notify to skip osascript
@@ -636,12 +633,6 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
         prog="daemon.py",
         description="teamwork-leader auto-resume daemon",
     )
-    # I-065: --self-test-* flags (t5, t6-exhaust, t7-abort, pid, reaper) are independent
-    # single-shot test paths; combining two simultaneously is undefined behavior.
-    # argparse mutually_exclusive_group was considered but omitted because _run_test_mode()
-    # resolves priority via early-return ordering (reaper > pid > t6 > t5 > t7), making
-    # mutual-exclusion enforcement redundant in practice.  Formalizing via
-    # add_mutually_exclusive_group is deferred to v0.1.8+ for cleaner operator UX.
     parser.add_argument(
         "--watch",
         metavar="DIR",
@@ -657,7 +648,9 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
             "without spawning claude"
         ),
     )
-    parser.add_argument(
+    # Exactly one self-test flag may be supplied at a time; combining two is undefined behavior.
+    mutex = parser.add_mutually_exclusive_group()
+    mutex.add_argument(
         "--self-test-t5",
         action="store_true",
         help=(
@@ -666,7 +659,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
             "Downstream: --self-test-t6-exhaust, --self-test-t7 follow same sub-flag naming pattern."
         ),
     )
-    parser.add_argument(
+    mutex.add_argument(
         "--self-test-t6-exhaust",
         action="store_true",
         help=(
@@ -676,7 +669,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
             "Writes last-resume-failure.txt + sets gate_state=ABORTED + exits 0."
         ),
     )
-    parser.add_argument(
+    mutex.add_argument(
         "--self-test-t7-abort",
         action="store_true",
         help=(
@@ -686,7 +679,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
             "Per I-051: dash-connected naming convention."
         ),
     )
-    parser.add_argument(
+    mutex.add_argument(
         "--self-test-pid",
         action="store_true",
         help=(
@@ -698,7 +691,7 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
             "Per I-051: dash-connected naming convention."
         ),
     )
-    parser.add_argument(
+    mutex.add_argument(
         "--self-test-reaper",
         action="store_true",
         help=(

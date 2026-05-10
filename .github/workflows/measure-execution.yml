@@ -30,6 +30,7 @@ on:
   push:
     branches:
       - feat/v0.1.9-measurement
+      - feat/v0.1.10-daemon-spec-changes
 
 jobs:
   measure-macos-14:
@@ -55,6 +56,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Verify python3 >= 3.10 (AC-9 hard gate)
+        run: |
+          python3 -c "import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)" \
+            || (echo "::error::python3 version <3.10 detected; AC-9 hard gate FAIL — ensure setup-python@v5 input python-version: 3.10+ precedes this step" && exit 1)
+
       # ── Environment setup ─────────────────────────────────────────────────────
       - name: Create .teamlead workspace directory
         run: mkdir -p "$CLAUDE_PROJECT_DIR/.teamlead"
@@ -72,26 +78,29 @@ jobs:
           echo "$CLAUDE_PROJECT_DIR"
           ls "$CLAUDE_PROJECT_DIR/.teamlead/" 2>/dev/null || echo ".teamlead dir absent — expected for cold-start"
 
-      # ── Stub claude binary (enables SESSION_RESUMED on GHA without real claude CLI) ──
-      - name: Install stub claude binary
+      # ── Real claude CLI install (T-2-2 Candidate A — real-claude end-to-end) ──────
+      # v0.1.10 Stage 2: npm install -g @anthropic-ai/claude-code installs real claude
+      # at /opt/homebrew/bin/claude on GHA macos-14 (arm64). Pre-validation run
+      # 25521618249 confirmed install in ~2s, claude 2.1.132 available, no auth prompts.
+      # CLAUDE_SKIP_HOOK_CHECK=1 set in plist env to suppress interactive hook prompts
+      # in non-interactive GHA shell during T5 session-resume invocation.
+      - name: Install real claude CLI
         run: |
-          STUB_DIR="$HOME/.local/bin"
-          mkdir -p "$STUB_DIR"
-          cp tools/claude-stub.sh "$STUB_DIR/claude"
-          chmod +x "$STUB_DIR/claude"
-          echo "$STUB_DIR" >> "$GITHUB_PATH"
-          # Also expose STUB_DIR for plist PATH injection (launchd does not inherit
-          # the shell PATH; the stub must be explicitly added to the plist env).
-          echo "STUB_DIR=$STUB_DIR" >> "$GITHUB_ENV"
-          echo "Stub claude installed at $STUB_DIR/claude"
+          npm install -g @anthropic-ai/claude-code
+          REAL_CLAUDE_DIR=$(dirname $(which claude))
+          # Expose REAL_CLAUDE_DIR for plist PATH injection (launchd does not inherit
+          # the shell PATH; the real claude binary must be explicitly on launchd PATH).
+          echo "STUB_DIR=$REAL_CLAUDE_DIR" >> "$GITHUB_ENV"
+          echo "Real claude installed at $(which claude): $(claude --version)"
 
       # ── Capture GHA python3 path for plist patching ─────────────────────────────
       # Two launchd environment problems patched by tools/patch-plist-python3.py:
       # (1) Python version: launchd resolves python3 to system Python 3.9 (macOS 14);
       #     daemon.py requires Python 3.10+ for list[str]|None syntax. Fix: replace
       #     /usr/bin/env+python3 in ProgramArguments with the absolute GHA python3 path.
-      # (2) claude stub visibility: stub is in $HOME/.local/bin which is not in
-      #     launchd's default PATH. Fix: inject PATH into plist EnvironmentVariables.
+      # (2) claude binary visibility: real claude is in /opt/homebrew/bin which is not
+      #     in launchd's default PATH. Fix: inject PATH into plist EnvironmentVariables.
+      #     STUB_DIR env var (set above) holds the real claude bin dir for this purpose.
       - name: Capture GHA python3 path
         id: python3_path
         run: |
@@ -101,10 +110,11 @@ jobs:
           echo "GHA python3 path: $PYTHON3_PATH"
           "$PYTHON3_PATH" --version
 
-      - name: Verify stub claude is on PATH
+      - name: Verify real claude is on PATH
         run: |
           which claude
-          echo "stub verified: $(which claude)"
+          claude --version
+          echo "real claude verified: $(which claude)"
 
       # ── Capture host environment (AC-4) ───────────────────────────────────────
       - name: Capture host environment (AC-4)
@@ -132,6 +142,9 @@ jobs:
                   if os.path.isfile(fp):
                       hook_chain.append({"file": f, "path": fp})
 
+          claude_path = subprocess.run(["which", "claude"], capture_output=True, text=True).stdout.strip()
+          claude_ver = subprocess.run(["claude", "--version"], capture_output=True, text=True).stdout.strip()
+
           host_env = {
               "os": os_name,
               "arch": arch_raw,
@@ -139,10 +152,13 @@ jobs:
               "hook_chain": hook_chain,
               "plist_install_path": plist_install_path,
               "runner_info": {"gha_runner_label": "macos-14", "gha_runner_arch": "ARM64"},
+              "claude_binary": "real",
+              "claude_path": claude_path,
+              "claude_version": claude_ver,
               "measurement_note": (
-                  "claude CLI not installed on GHA; stub (tools/claude-stub.sh: "
-                  "sleeps 3s then exits 0) placed ahead of PATH to enable T5 "
-                  "SESSION_RESUMED transition without T6 retry exhaustion."
+                  "Real claude CLI installed via npm install -g @anthropic-ai/claude-code. "
+                  "T-2-2 Candidate A (real-claude end-to-end). Pre-validation run 25521618249 "
+                  "confirmed install success and no interactive auth prompts on GHA macos-14."
               ),
           }
 
@@ -501,7 +517,7 @@ jobs:
           summary_path = os.environ.get("GITHUB_STEP_SUMMARY", "/dev/stdout")
 
           lines = [
-              "## Measurement Results — I-023-M1 v0.1.9",
+              "## Measurement Results — I-023-M1 v0.1.10 (real-claude GHA)",
               "",
               f"- Runner: macos-14 arm64",
               f"- Run ID: {os.environ.get('GITHUB_RUN_ID', 'unknown')}",
