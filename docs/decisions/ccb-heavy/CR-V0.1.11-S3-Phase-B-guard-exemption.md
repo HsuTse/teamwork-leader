@@ -2,7 +2,13 @@
 
 <!--
 Authority: TeamLead drafts; CEO is sole approver (per design doc §3 RACI matrix + §8).
-CCB-Heavy is required for risk-driven change (security posture adjustment on user-personal Mac).
+CCB-Heavy is required for any of:
+- Charter material change
+- Cross-stage scope shift
+- ≥3 same-section OR ≥5 stage-total CCB-Light auto-escalation
+- 2× cumulative project budget breach
+- Multi-PM impact requiring re-baseline
+
 Per references/pmp-ccb.md.
 
 Once raised, PROGRESS.md ## CCB-Heavy Pending section is populated; cleared when CEO decides.
@@ -148,3 +154,65 @@ guard before expiry. No open-ended exemption window is authorized.
 - [ ] Keep PROGRESS.md ## CCB-Heavy Pending populated (do NOT clear)
 - [ ] Surface to CEO at next CEO_Gate via AskUserQuestion: "CCB-Heavy still deferred — re-decide?"
 - [ ] No further dispatches until CEO returns approve/reject
+
+---
+
+## Execution amendment trail (post-CCB-Heavy-approve discoveries)
+
+This CR was approved at extraordinary CEO_Gate 2026-05-10T~14:25+08:00 with verb=approve. **Execution diverged from §Proposed resolution Steps 1-7 due to two empirical discoveries surfaced during Phase B execution.** Steps 1-7 above are SUPERSEDED by revised path; preserved here for governance audit trail of original CCB-Heavy approve scope. The actual executed path is described below + cross-referenced to the as-executed evidence doc.
+
+### CEO decision (post-amendment)
+
+- **Verb**: approve
+- **Decided at**: 2026-05-10T~14:25+08:00
+- **Notes**: Approved as-drafted at CCB-Heavy gate; subsequent execution diverged due to Discovery #1 (CR premise empirically refuted) and Discovery #2 (Python launchd PATH blocker required additional workaround). Both deviations registered as separate CCB-Light entries (CCBL-Stage3-v0.1.11-PhaseB-CR-INVALID-PREMISE + CCBL-Stage3-v0.1.11-PhaseB-PYTHON-PATH-WORKAROUND); CEO re-decisions accepted via AskUserQuestion 2026-05-10T~14:32 + ~14:45 respectively.
+
+### Discovery #1 — Guard relax premise was empirically refuted
+
+After approve at 2026-05-10T~14:25, TeamLead read `~/.claude/hooks/pretooluse_guard.py` source (this CR's §Proposed resolution Step 1 "snapshot" stage) and discovered:
+
+1. PreToolUse Bash hook only scans literal Bash tool command strings — NOT internal subprocess calls
+2. `scripts/install.py` uses `subprocess.run(["launchctl", "bootstrap", ...])` (Python list-form), which does NOT route through Claude Code's Bash hook
+3. The hook already has a built-in teamwork-leader plist exemption (`_LAUNCHCTL_TEAMLEAD_RE` lines 198-207) that downgrades deny→ask for plist-name-matching commands
+
+**Implication**: this CR's "scope-limited guard relaxation" (§Proposed resolution Steps 2 + 5 + 7 + RAID-R / RAID-A) was unnecessary. CEO re-decision (AskUserQuestion 2026-05-10T~14:32) selected "approve revised path" — execute Phase B WITHOUT touching guard config.
+
+**RAID delta**:
+- RAID-R-S3-PhaseB-guard-relaxation → CLOSED-NOT-NEEDED
+- RAID-A-S3-PhaseB-restore-reliable → N/A
+
+**Token impact**: ~16 kT savings vs original CR path; zero security posture change.
+
+### Discovery #2 — Python 3.9 vs 3.10+ launchd PATH blocker (universal, not GHA-only)
+
+After Discovery #1 fix applied + `python3 install.py` Layer 1 succeeded (plist installed at `~/Library/LaunchAgents/`), daemon CRASHED at module-load:
+
+```
+File "/Users/HsuTse/ClaudeProject/teamwork-leader/scripts/daemon.py", line 994
+    def main(argv: list[str] | None = None) -> int:
+TypeError: unsupported operand type(s) for |: 'types.GenericAlias' and 'NoneType'
+```
+
+**Root cause**: launchd restricted PATH (`/usr/bin:/bin:/usr/sbin:/sbin`) doesn't inherit user shell PATH; `/usr/bin/env python3` resolves to macOS 14 system Python 3.9 (no PEP 604 union syntax). User has Python 3.13.13 at `/opt/homebrew/bin/python3.13` but launchd can't see it. **Empirically refutes** the assumption inherited from `feedback_reference-host-vs-deployment-target.md` that "local launchd PATH inheritance is not a problem".
+
+Opus advisor consultation 2026-05-10T~14:42 (mid-stage advisor pattern per v0.1.7-v0.1.10 precedent) recommended Option (A) workaround — apply `tools/patch-plist-python3.py` as one-shot operational fix; v0.1.12 dedicated charter handles install.py root fix. CEO accept 2026-05-10T~14:45.
+
+**RAID delta**:
+- RAID-V11-install-lifecycle-python3-path → ESCALATED from "v0.1.12 carry candidate" to **v0.1.12 mandatory HIGH**
+
+**Token impact**: +~10 kT vs (B) BLOCKED+demote +~5 kT but avoids 4-th charter demote; +~30 kT vs (C) install.py refactor avoids charter scope creep.
+
+### As-executed evidence
+
+See `docs/specs/v0.1.11-evidence/measurement-real-launchd-local.v0.1.11.md`:
+- §1 Result summary: cold 12.099s + warm 11.091s SESSION_RESUMED, both ≤30s ship gate (Charter §AC-3 DoD MET)
+- §2 Phase B execution narrative (CCB-Heavy approve → Discovery #1 → CEO re-decision → install + Discovery #2 → Opus advisor → workaround applied → measurement → cleanup)
+- §3 Empirical evidence (daemon.err traces + raw measurement JSONL inline)
+- §4 Cleanup verification (bootout + plist removal + daemon process gone + working tree restored)
+- §5 v0.1.12 implications (install.py upgrade scope + measurement-diversity caveat)
+
+### RAID delta finalization (on Phase B PASS)
+
+- RAID-V-S3-PhaseB-ac3-met → VALIDATED
+- RAID-I-S3-D2-1 (Phase C charter-validity caveat) → CLOSED
+- RAID-V11-real-claude-integration AC-3 portion → CLOSED

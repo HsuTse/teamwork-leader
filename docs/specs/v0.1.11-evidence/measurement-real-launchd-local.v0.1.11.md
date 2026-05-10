@@ -160,6 +160,8 @@ The 3-charter recurring host-class blocker is now **structurally addressable** w
 
 4. **restore_prompt allowlist documentation**: surface to end-user docs (README) so external dogfooders avoid em-dash / smart-quote tripwires.
 
+5. **Sample size + session diversity caveat**: N=2 same-session (ed6034b9) sample is sufficient for v0.1.11 ship-gate per Charter §AC-3 literal "≥1 cold + ≥1 warm" but NOT statistically representative of real-claude --resume latency distribution across session size classes. v0.1.12 measurement upgrade should sample ≥3 distinct sessions of varied jsonl size (small <50 KB / medium ~150 KB / large >500 KB) to characterize per-size-class latency. Mirrored to `PROGRESS.md ## Lessons Learned` as `LL-V11-S3-MEASURE-DIVERSITY` (carry to v0.1.12). Adds robustness to ship-gate beyond v0.1.11's single-session sample.
+
 ---
 
 ## 6. Cross-references

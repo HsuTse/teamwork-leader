@@ -25,9 +25,9 @@ JSONL_OUT = os.path.join(ROOT, ".teamlead", "synthetic-t5-measurement.jsonl")
 SUMMARY_OUT = os.path.join(ROOT, "docs", "specs", "v0.1.11-evidence", "synthetic-t5-summary.json")
 
 
-def _pct(vals: list[float], p: float) -> float:
-    s = sorted(vals)
-    return s[max(0, math.ceil(p / 100.0 * len(s)) - 1)]
+def _pct(sorted_vals: list[float], p: float) -> float:
+    # _pct: assumes sorted_vals is already sorted (caller responsibility; see _stats)
+    return sorted_vals[max(0, math.ceil(p / 100.0 * len(sorted_vals)) - 1)]
 
 
 def _stats(vals: list[float]) -> dict:

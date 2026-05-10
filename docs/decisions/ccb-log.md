@@ -61,6 +61,26 @@ Created: 2026-05-04 (S4-PLAN-PO dispatch; first PO Light entry for Stage 4 desig
 | 2026-05-08 | `Stage 2 T-2-1 local real-claude measurement BLOCKED (CCBL-Stage2-v0.1.10-T21-LOCAL-BLOCKED) + measurement-protocol.v0.1.10.md §methodology-deviations deviation-3` | RD V0.1.10-S2-EX1 EXECUTING: T-2-1 BLOCKED by env-class issue (system python3 3.9.6 on macOS 15.3 vs daemon.py PEP 604 syntax requiring 3.10+; install.py + plist template re-render loses patch-plist-python3.py runtime fix; reload via launchctl bootout/bootstrap hard-denied by hook after repeated approved ask-prompts — D-3 escalation behavior). 3 resolution options (A/B/C) surfaced; TeamLead Auto Mode selected Option **C** (Accept BLOCKED + GHA-only AC-7) per Opus PlanAudit `partial_acceptable_for_Stage2_close` rule + [HsuTse] blanket "直接開發至結束" authorization. Empirical block proof: see RAID-I-S2-launchctl-hook closure note. AC-7(i) status: PROVEN-UNAVAILABLE on this host class. Install-lifecycle hardening (Option B template fix or Option A permission rule) deferred to v0.1.11. (V0.1.10-S2-EX1; dispatch_id: V0.1.10-S2-EX1) | Charter AC-7: `(i) 本機 macOS host (Hook 白名單路徑) AND (ii) GHA macos-14 reference host 雙處執行` → AC-7 partial: (i) PROVEN-UNAVAILABLE (env-class block; deferred to v0.1.11) + (ii) GHA real-claude (Candidate A confirmed via pre-val) — pending main measurement run; deviation-3 added to measurement-protocol.v0.1.10.md §methodology-deviations |
 | 2026-05-08 | `Stage 2 T-2-2 GHA real-claude/daemon integration gap empirically proven (CCBL-Stage2-v0.1.10-T22-GHA-INTEGRATION-GAP) + measurement-protocol.v0.1.10.md §methodology-deviations deviation-4` | GHA workflow run 25532761179 (Candidate A real-claude path; commit efbd5af): pre-validation PASS confirmed claude installable; main run installed claude 2.1.133 + daemon installed each cold cycle (~13s install) BUT 10/10 cold + 10/10 warm SESSION_RESUMED never reached within timeouts (C-4 90s; W-3 60s). cold_runs.jsonl + warm_runs.jsonl: 0 bytes. Root cause: daemon's polling target (designed against stub-claude artifact format) does not match what real claude produces on `--resume`. This is a v0.1.7 daemon-design assumption that surfaced at v0.1.10 first real-claude end-to-end attempt. Anti-scope-creep mandate prohibits scope expansion to debug integration; deferred to v0.1.11 RAID-V11-real-claude-integration (sev:HIGH). AC-7(ii) status: PROVEN-INTEGRATION-GAP. AC-7 (overall) → PARTIAL with comprehensive empirical proof for both host paths (deviation-3 + deviation-4). (V0.1.10-S2-EX1-result-followup; dispatch_id: V0.1.10-S2-G1-prep) | AC-7(ii) target: `GHA macos-14 reference host real-claude end-to-end measurement` → AC-7(ii) PROVEN-INTEGRATION-GAP (install-layer PASS + integration-layer FAIL); deviation-4 added to measurement-protocol.v0.1.10.md §methodology-deviations; AC-7 overall PARTIAL |
 
+### Stage 1 (v0.1.11 charter)
+
+| Date | Section | Rationale | Original→New |
+|---|---|---|---|
+| 2026-05-10 | `Stage 1 (v0.1.11) §Gate_Human declaration` | CCBL-Stage1-v0.1.11-GATE-HUMAN-NA | non-interactive scope (CLI experiment + hook code + spec doc + dispatch-header addendum + jsonl scaffold; zero UI surface) | inline PROGRESS.md ## CCB Activity ### Stage 1 (v0.1.11 charter) |
+
+### Stage 2 (v0.1.11 charter)
+
+| Date | Section | Rationale | Original→New |
+|---|---|---|---|
+| 2026-05-10 | `Stage 2 (v0.1.11) §Gate_Human declaration` | CCBL-Stage2-v0.1.11-GATE-HUMAN-NA | non-interactive scope (daemon code + workflow YAML + spec doc; zero UI surface) | inline PROGRESS.md ## CCB Activity ### Stage 2 (v0.1.11 charter) |
+
+### Stage 3 (v0.1.11 charter)
+
+| Date | Section | Rationale | Original→New |
+|---|---|---|---|
+| 2026-05-10 | `Stage 3 (v0.1.11) §Charter clarification` | CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME | Charter §AC-3 reframed: "GHA macos-14 reference host" → "local macOS host (real user deployment environment)"; §Constraints append explicit CI-scope-only clause | inline PROGRESS.md ## CCB Activity ### Stage 3 (v0.1.11 charter) |
+| 2026-05-10 | `Stage 3 (v0.1.11) §CCB-Heavy CR scope amendment` | CCBL-Stage3-v0.1.11-PhaseB-CR-INVALID-PREMISE | CR-V0.1.11-S3-Phase-B-guard-exemption "guard relax" premise empirically refuted post-approve; CEO re-decision: revised path (no guard edit); ~16 kT savings + zero security posture change | inline PROGRESS.md ## CCB Activity ### Stage 3 (v0.1.11 charter) |
+| 2026-05-10 | `Stage 3 (v0.1.11) §Workaround application + RAID escalation` | CCBL-Stage3-v0.1.11-PhaseB-PYTHON-PATH-WORKAROUND | Python 3.9 vs 3.10+ launchd PATH blocker (Discovery #2); patch-plist-python3.py applied per Opus advisor (A) recommendation; RAID-V11-install-lifecycle-python3-path escalated v0.1.12 carry-candidate → mandatory HIGH | inline PROGRESS.md ## CCB Activity ### Stage 3 (v0.1.11 charter) |
+
 ## Heavy events
 
 <!-- No CCB-Heavy events have reached CEO decision stage as of 2026-05-04 (Stages 1-4).
@@ -83,6 +103,26 @@ Created: 2026-05-04 (S4-PLAN-PO dispatch; first PO Light entry for Stage 4 desig
   - [x] docs/decisions/ccb-log.md §Heavy events: this row appended
 - **RAID delta applied**: RAID-V11-real-claude-integration (open-v0.1.11, sev:HIGH) + RAID-V11-install-lifecycle-python3-path (open-v0.1.11, sev:MED) + RAID-V11-ccb-token-cost (open-v0.1.11, sev:MED) + RAID-V11-pm-subagent-disclosure (open-v0.1.11, sev:MED) + RAID-SEC-V11-backtick-subshell-injection (open-v0.1.11, sev:MED)
 
+### Stage 3 (v0.1.11 charter), CCB-Heavy #2 (decided 2026-05-10)
+
+| Date | CR ID | Verb | Stage | Material change description | Notes |
+|---|---|---|---|---|---|
+| 2026-05-10T~14:25+08:00 | CR-V0.1.11-S3-Phase-B-guard-exemption | approve | 3 (v0.1.11) | Authorize TeamLead to coordinate scope-limited time-bounded relaxation of user's `~/.claude/hooks/pretooluse_guard.py` denylist for `launchctl bootstrap` targeting teamwork-leader plist (≤2h wall-clock; sha256 audit; restore protocol). | **Execution amendment trail**: post-approve Discovery #1 empirically refuted CR premise (CCBL-Stage3-v0.1.11-PhaseB-CR-INVALID-PREMISE); CEO re-decision: revised path (no guard edit); RAID-R/A close-not-needed; ~16 kT savings + zero security posture change. See CR file §Execution amendment trail for full pivot detail; as-executed evidence at `docs/specs/v0.1.11-evidence/measurement-real-launchd-local.v0.1.11.md`. |
+
+- **id**: CR-V0.1.11-S3-Phase-B-guard-exemption
+- **time-raised**: 2026-05-10T14:10+08:00 (PO V0.1.11-S3-D3 dispatch; commit 7823d14)
+- **time-decided**: 2026-05-10T~14:25+08:00 (extraordinary CEO_Gate via AskUserQuestion)
+- **Origin**: PM-surfaced material issue (Phase C transparency finding RAID-I-S3-D2-1; CCB-Heavy required for security posture adjustment on user-personal Mac)
+- **Linked Light entries**: CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME (Stage 3, above)
+- **Material change**: Authorize scope-limited time-bounded guard relaxation for Phase B real-launchd E2E measurement (≤2h wall-clock; narrow plist-specific regex; sha256 pre/post audit; restore-on-mismatch abort)
+- **CEO verb**: approve
+- **Post-decision actions taken**:
+  - [x] PROGRESS.md ## CCB-Heavy Pending cleared
+  - [x] PROGRESS.md ## RAID Register delta applied (RAID-R-S3-PhaseB-guard-relaxation + RAID-A-S3-PhaseB-restore-reliable + RAID-V-S3-PhaseB-ac3-met added)
+  - [x] Phase B execution authorized; Discovery #1 + #2 encountered post-approve (see CR §Execution amendment trail)
+  - [x] docs/decisions/ccb-log.md §Heavy events: this block appended (Phase D PO batch)
+- **RAID delta applied**: RAID-R-S3-PhaseB-guard-relaxation (added then CLOSED-NOT-NEEDED per Discovery #1) + RAID-A-S3-PhaseB-restore-reliable (added then N/A per Discovery #1) + RAID-V-S3-PhaseB-ac3-met (VALIDATED on Phase B PASS) + RAID-I-S3-D2-1 (CLOSED on Phase B PASS) + RAID-V11-real-claude-integration AC-3 portion (CLOSED on Phase B PASS) + RAID-V11-install-lifecycle-python3-path (ESCALATED to v0.1.12 mandatory HIGH per Discovery #2)
+
 ## Cap-rule audit (per stage, derived from Light tables above)
 
 | Stage | Light count | Same-section max | ≥3 same-section breach? | ≥5 stage total breach? | Auto-escalated to CCB-Heavy? |
@@ -94,6 +134,9 @@ Created: 2026-05-04 (S4-PLAN-PO dispatch; first PO Light entry for Stage 4 desig
 | 5 (v0.1.8) | 1 | 1 (§7 is net-new section; no prior entry) | no | no | no |
 | 1 (v0.1.10) | 5 | 1 (AC1-WORDING / AC4-PLACEMENT / AC10-EVIDENCE / MP-PROTOCOL / GATE-HUMAN-NA — five different sections) | no | yes (5 stage-total = cap; auto-cap-rule audit — see Suppression escape hatch) | no |
 | 2 (v0.1.10) | 3 | 1 (T24-ANCHOR / T21-LOCAL-BLOCKED / T22-GHA-INTEGRATION-GAP — three different sections) | no | no | no |
+| 1 (v0.1.11) | 1 | 1 (GATE-HUMAN-NA) | no | no | no |
+| 2 (v0.1.11) | 1 | 1 (GATE-HUMAN-NA) | no | no | no |
+| 3 (v0.1.11) | 3 | 1 (AC3-LOCAL-REFRAME / PhaseB-CR-INVALID-PREMISE / PhaseB-PYTHON-PATH-WORKAROUND — three different sections) | no | no | no |
 
 ## Suppression escape hatch usage (per pmp-ccb.md §Cap rules)
 
@@ -107,13 +150,16 @@ Created: 2026-05-04 (S4-PLAN-PO dispatch; first PO Light entry for Stage 4 desig
 | 1 (v0.1.9 M-4) | no | n/a |
 | 1 (v0.1.10) | **yes — escape hatch invoked** | All 5 entries (AC1-WORDING / AC4-PLACEMENT / AC10-EVIDENCE / MP-PROTOCOL / GATE-HUMAN-NA) originated from a single atomic governance event chain: Opus PlanAudit verdict APPROVED_WITH_REVISIONS → CEO 3-decision menu → applied at Stage 1 entry to EXECUTING + Gate_Forward declaration. Each entry closes a distinct PlanAudit blocker / major / RAID; none reflect chronic drift, churn, or scope creep. Per `references/pmp-ccb.md §Cap rules`, suppression escape hatch is the correct call when cap is reached via single-event atomic closures rather than recurring clarification need. |
 | 2 (v0.1.10) | no | n/a |
+| 1 (v0.1.11) | no | n/a |
+| 2 (v0.1.11) | no | n/a |
+| 3 (v0.1.11) | no | n/a |
 
 ## Project-level CCB statistics
 
 <!-- Will be populated at ProjectClose. -->
 
-- Total CCB-Light: 16 (CCBL-001 + CCBL-002 + CCBL-003 + CCBL-Stage3-001 + CCBL-Stage4-S4-PLAN-PO + CCBL-Stage4-T-4-6 + CCBL-Stage5-S1-D1 + CCBL-Stage1-v0.1.9-M4 + CCBL-Stage1-v0.1.10-AC1-WORDING + CCBL-Stage1-v0.1.10-AC4-PLACEMENT + CCBL-Stage1-v0.1.10-AC10-EVIDENCE + CCBL-Stage1-v0.1.10-MP-PROTOCOL + CCBL-Stage1-v0.1.10-GATE-HUMAN-NA + CCBL-Stage2-v0.1.10-T24-ANCHOR + CCBL-Stage2-v0.1.10-T21-LOCAL-BLOCKED + CCBL-Stage2-v0.1.10-T22-GHA-INTEGRATION-GAP)
-- Total CCB-Heavy: 1 (CCBH-v0.1.10-AC7-DEMOTE-V0.1.11)
+- Total CCB-Light: 21 (CCBL-001 + CCBL-002 + CCBL-003 + CCBL-Stage3-001 + CCBL-Stage4-S4-PLAN-PO + CCBL-Stage4-T-4-6 + CCBL-Stage5-S1-D1 + CCBL-Stage1-v0.1.9-M4 + CCBL-Stage1-v0.1.10-AC1-WORDING + CCBL-Stage1-v0.1.10-AC4-PLACEMENT + CCBL-Stage1-v0.1.10-AC10-EVIDENCE + CCBL-Stage1-v0.1.10-MP-PROTOCOL + CCBL-Stage1-v0.1.10-GATE-HUMAN-NA + CCBL-Stage2-v0.1.10-T24-ANCHOR + CCBL-Stage2-v0.1.10-T21-LOCAL-BLOCKED + CCBL-Stage2-v0.1.10-T22-GHA-INTEGRATION-GAP + CCBL-Stage1-v0.1.11-GATE-HUMAN-NA + CCBL-Stage2-v0.1.11-GATE-HUMAN-NA + CCBL-Stage3-v0.1.11-AC3-LOCAL-REFRAME + CCBL-Stage3-v0.1.11-PhaseB-CR-INVALID-PREMISE + CCBL-Stage3-v0.1.11-PhaseB-PYTHON-PATH-WORKAROUND)
+- Total CCB-Heavy: 2 (CCBH-v0.1.10-AC7-DEMOTE-V0.1.11 + CR-V0.1.11-S3-Phase-B-guard-exemption)
 - Most-revised sections: §4 daemon.py contract (1), payload-channel (1), plan-decomp-strategy (1)
 
 ## Cross-reference
