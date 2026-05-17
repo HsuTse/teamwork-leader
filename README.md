@@ -5,173 +5,84 @@
 [![version](https://img.shields.io/badge/version-0.1.11-blue.svg)](./.claude-plugin/plugin.json)
 [![license](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
+各版本變更記錄見 [CHANGELOG.md](./CHANGELOG.md) 與 GitHub Releases。
+
 ---
 
 ## 這是什麼
 
 `teamwork-leader` 是一個 [Claude Code](https://claude.com/claude-code) plugin，把單一 Claude session 變成一個小型專案組織：
 
-- **TeamLead**（你 + 此 plugin 的 skill）—— 專案編排者，管理 stage、預算、RAID、CCB
-- **CEO**（使用者）—— 在三道 gate 給出 approve / revise / abort 等決策
-- **PMs**（5 個 agent：PO / RD / QA / UX / Ad-hoc）—— 各司其職的執行者
-- **三道驗證閘**：CEO_Gate（人類批准）/ Stage Gate（PM closure）/ Mini Gate_Forward（per-task scoped）
+| 角色 | 身分 | 職責 |
+|---|---|---|
+| **CEO** | 使用者 | 在 gate 給出 approve / revise / abort 等決策 |
+| **TeamLead** | plugin 的 skill | 專案編排者 — 管理 stage、預算、RAID、CCB，不寫 code |
+| **PMs** | 5 個 subagent | PO / RD / QA / UX / Ad-hoc，各司其職的執行者 |
 
 設計目標：用 **PMP 紀律 + multi-agent verification** 結構，把「Claude 自說自話通過」這類 rubber-stamp 風險降到最低。
 
 ## 何時適合用
 
-- 多步驟、跨領域的中大型開發任務（spec / dev / test / UX 都要動）
-- 需要明確 audit trail、預算可追蹤、決策可回溯
-- 有「中途想換方向」的可能 → 透過 CCB-Light/Heavy 走正式 change control
+**適合** — 多步驟、跨領域的中大型開發任務（spec / dev / test / UX 都要動）；需要明確 audit trail、預算可追蹤、決策可回溯；中途可能換方向、需要正式 change control。
 
-不適合：
-
-- 單檔修改、trivial typo fix、純探索查詢 → 直接用 Claude Code 即可，這個 plugin 是 overkill
+**不適合** — 單檔修改、trivial typo fix、純探索查詢。直接用 Claude Code 即可，這個 plugin 是 overkill。
 
 ## 安裝
 
 透過 Claude Code plugin marketplace：
 
 ```bash
-# 1. 註冊此 repo 為 marketplace
-claude plugin marketplace add HsuTse/teamwork-leader
-
-# 2. 安裝 plugin
-claude plugin install teamwork-leader@teamwork-leader
-
+claude plugin marketplace add HsuTse/teamwork-leader   # 1. 註冊 marketplace
+claude plugin install teamwork-leader@teamwork-leader  # 2. 安裝
 # 3. 重啟 Claude Code session
 ```
 
-啟用後即可在任何 session 使用 `/teamwork-leader` 啟動 TeamLead 角色。
+- 更新：`claude plugin update teamwork-leader@teamwork-leader`
+- 移除：`claude plugin uninstall teamwork-leader@teamwork-leader`
 
-> **更新**：`claude plugin update teamwork-leader@teamwork-leader`
-> **移除**：`claude plugin uninstall teamwork-leader@teamwork-leader`
+### 依賴
 
-## Quick Start
+| 元件 | 需求 | 用於 |
+|---|---|---|
+| Claude Code | 支援 plugin / skill / agent / hook | 全部功能 |
+| Python | ≥ 3.10 | hooks 與 auto-resume daemon |
+| macOS launchd | macOS only | auto-resume daemon（其他平台自動降級，核心流程不受影響）|
+| bash + `claude` CLI | — | Gate_Requirement runner |
+
+核心 TeamLead 流程（skill / command / agents / templates）為純 Markdown，無執行期依賴；上述依賴僅 auto-resume daemon 等選用功能需要。
+
+## 執行方式
 
 ```text
 /teamwork-leader 我要建一個小型筆記 app，含 markdown 編輯、tag、搜尋
 ```
 
-TeamLead 會：
+TeamLead 的 boot sequence：
 
-1. **Boot sequence** — 載入操作規則（Step 0 強制 Read SKILL.md / stage-runbook.md / dispatch-header.md）
-2. **Discovery** — 問你三個問題（目標 / 成功標準 / constraint）
+1. **Boot** — 載入操作規則（強制 Read SKILL.md / stage-runbook.md / dispatch-header.md）
+2. **Discovery** — 問三個問題（目標 / 成功標準 / constraint）
 3. **Branch + Worktree check** — 偵測 staging/release 分支，提示風險
 4. **TeamFormation** — 建議啟用哪些 PM（預設 PO+RD+QA，UX/Ad-hoc 視範圍）
-5. **CEO_Gate_0** — 用 6 verbs（approve/revise_next/revise_charter/redirect/pause/abort）給你結構化 prompt
-6. 批准後進入 **Stage 1 PLANNING → EXECUTING → GATING → AWAITING_CEO** 循環
+5. **CEO_Gate_0** — 用 6 verbs（approve / revise_next / revise_charter / redirect / pause / abort）給結構化 prompt
+6. 批准後進入 stage 循環
 
-每 stage 結束 TeamLead 會重新 dispatch 各 PM，依 [`stage-runbook.md`](./skills/teamwork-leader-workflow/references/stage-runbook.md) 的狀態機運作。
+`/teamwork-leader` 不帶參數即為 **resume 模式** — 偵測既有 `PROGRESS.md`，比對狀態機與實際進度後接續。
 
-## 核心特色
+## 架構
 
-### 三道驗證閘
+### 狀態機
 
-| Gate | 範圍 | 觸發 | 主導者 |
-|---|---|---|---|
-| **CEO_Gate_N** | 整 stage | 每 stage 收尾 | CEO（人類）批准 |
-| **Stage Gate** | PM 工作物 | PM dispatch 結束 | PM 自行 closure |
-| **Mini Gate_Forward** | 單一 task 的 `artifacts_touched` | KMR per-task divergence proxy 觸發 | TeamLead 自決（per-instance） |
+每個 stage 依 [`stage-runbook.md`](./skills/teamwork-leader-workflow/references/stage-runbook.md) 走固定循環：
 
-### Auto-Resume Daemon（v0.1.7）
+```
+PLANNING → PLAN_AUDIT → EXECUTING → GATING → REPORTING → AWAITING_CEO
+                                                              │
+                          ESCALATED ◄── retry 耗盡 / INCONCLUSIVE
+```
 
-Plugin-self-contained AutoCompact resilience — 補完 cross-session resume 自動化路徑。Claude Code AutoCompact / `/clear` / 主動 pause 後，由 launchd-supervised daemon 偵測 `baton.json` `gate_state=BATON_WRITTEN` 自動 invoke `claude --resume`，免人工介入。
+TeamLead 是 `PROGRESS.md` 狀態機欄位的唯一寫入者；PMs 以結構化 JSON payload 回報，由 TeamLead parse 後序列化。
 
-**架構（兩階段）**：
-
-| Phase | 範圍 | 主要 artifact |
-|---|---|---|
-| Phase 1 hooks/lib (Stage 1-3) | PreCompact/SessionStart/Stop hook + baton-writer/gate-lock/handoff-builder/notifier lib + 5 measurement tools | `hooks/*.py` × 3 / `lib/*.py` × 4 / `tools/*.sh` × 5 |
-| Phase 2 daemon (Stage 4 FINAL) | launchd 長駐 daemon + 3-layer install + plist template + measurement extension | `scripts/daemon.py` 991L / `scripts/install.py` 236L / `templates/com.teamwork-leader.auto-resume-daemon.plist.in` |
-
-**daemon 5 actor states**（`scripts/daemon.py`；皆 `--self-test` synthetic CI 驗證）：
-
-- T5 BATON_WRITTEN → SESSION_RESUMED：gate.lock acquire + git stash safety net + restore_prompt allowlist + `subprocess.Popen claude --resume <session_id> -p "<restore_prompt>"`
-- T6 retry: counter file 1s/4s/16s exponential backoff；N=3 exhaust → T7
-- T7 ABORTED：`last-resume-failure.txt` + `lib/notifier.py --notify` + baton `gate_state=ABORTED` + clean exit
-- reaper：`subprocess.run(['python3', LIB_GATE_LOCK, '--reap', GATE_LOCK_PATH])` 清 stale lock
-- pid lifecycle：0o600 atomic write via `os.open(O_WRONLY|O_CREAT|O_TRUNC)` + `os.replace`；NOT removed on clean exit (launchd respawns and overwrites atomically)
-
-**install.py 3-layer**（degraded-mode tolerant）：
-
-1. Layer 1：plist render via Python `string.Template.safe_substitute` (interpolates `${CLAUDE_PLUGIN_ROOT}` + `${CLAUDE_PROJECT_DIR}`) + `subprocess.run` bootstrap
-2. Layer 2：non-zero exit / I-019 guard-block → `.teamlead/install-state.json` `{"status":"manual-pending"}` + degraded-mode warning + exit 0（NOT FAIL）
-3. Layer 3：write `install-probe.json` + 1s poll × 10s deadline + WARNING on timeout（still exit 0）
-4. `--dry-run` safe on guard-blocked hosts；`--uninstall` idempotent
-
-**design.md FROZEN spec**：7 acceptance criteria (AC-4-A..G) + 7 cross-script integration invariants (CI-1..CI-7：baton polling / gate.lock subprocess / resume invocation / notifier subprocess / no module imports / hooks FROZEN / check-cross-refs.sh extension)。
-
-**量測已完成（v0.1.9）**：v0.1.9 charter 在 GitHub Actions macOS runner（macos-14 arm64）非 guarded host 上執行 I-023-M1 測量；**cold-start p50=15.5s / p95=15.9s / max=15.9s** 與 **warm-start p50=5.3s / p95=5.8s / max=5.8s**（N=10 per arm）— 三個統計值皆 ≤30s ship gate。詳見 [`docs/archives/measurement.v0.1.9.md`](./docs/archives/measurement.v0.1.9.md)；方法論偏差登記於 [`docs/specs/measurement-protocol.v0.1.9.md §methodology-deviations`](./docs/specs/measurement-protocol.v0.1.9.md)；shipping constraint 全文（含 v0.1.9 measurement closure term (e)）見 [`docs/specs/auto-resume-daemon-design.md §7`](./docs/specs/auto-resume-daemon-design.md)。
-
-詳見 `docs/specs/auto-resume-daemon-design.md` (FROZEN 設計文件) 與 `docs/specs/phase-4-evidence/stage-4-close-report.txt` (close report v2 post-Opus-revisions)。
-
-### Anti-self-skip（v0.1.6）
-
-PLAN_AUDIT 階段的 Opus 審查者有一個特定風險：可以記錄一個真實問題，然後在 `suggested_fix` 欄位填寫 `"skip"` / `"none"` / `"no change"` — 等於 rubber-stamp 了計劃卻留下表面上的稽查記錄。Rule 7 專門關閉這個缺口。
-
-**適用範圍**：TeamLead 透過 `Agent` tool 以 `model: opus` 派遣的 plugin-internal Opus 審查者（PLAN_AUDIT 階段）。**不適用**於 host `/opus-review final` skill — 該 skill 由 CEO 手動呼叫，不在 TeamLead dispatch loop 內，無法注入 Rule 7 blacklist block。
-
-**觸發時機**：僅在 PLAN_AUDIT 狀態。EXECUTING 階段的 PM dispatch 由 Rules 0–6 保護（不同角色、不同 enforcement surface）。
-
-**4 項 Enforcement**：
-
-| Enforcement | 內容 |
-|---|---|
-| 1. Dispatch prompt blacklist | Opus dispatch 開頭強制注入 blacklist block：`"skip"` / `"none"` / `"no change"` / `"cosmetic only"` / `"minimal-diff"` 禁止作為 `suggested_fix` 值 |
-| 2. Structured-field validation | `suggested_fix` 欄位必須可操作；字面值匹配 blacklist → 該 issue 視為未記錄（no-fix means no-issue）|
-| 3. 全部 issue 上浮 CEO | 所有有效 issue（`suggested_fix` 可操作者）不分嚴重程度一律上浮 CEO；審查者不得依 severity 自行過濾 |
-| 4. 1-retry post-receive guard | 偵測到 blacklist 值 → 重派 Opus 一次（corrective prompt）；再次偵測 → ESCALATED with `plan_audit_self_skip_persistent` |
-
-**Knob 設定**：`plan_audit_anti_self_skip_mode` (預設 `strict`)；`warn` / `off` 需 CCB-Heavy。
-
-**稽查欄位**：`plan_audit_self_skip_detected: true | false | null` 記錄於 `audit-trail.jsonl`。
-
-詳見 [`references/plan-audit-rubric.md`](./skills/teamwork-leader-workflow/references/plan-audit-rubric.md)（verbatim dispatch prompt + validation procedure）及 [`references/anti-rubber-stamp.md`](./skills/teamwork-leader-workflow/references/anti-rubber-stamp.md) §Rule 7。
-
-### 自動化驗證採樣
-
-PM 回傳含結構化驗證 meta block，TeamLead 依下列訊號自動決定採樣深度：
-
-- **每次 dispatch**：依 PM 自評與實際結果的 divergence 決定 Aligned / Watch / Escalate
-- **跨 stage**：每 PM 維持 rolling 3-stage 信任分級（restricted / standard / trusted），搭配 anti-gaming 偵測
-- **per-task**：必要時觸發 Mini Gate_Forward，僅檢核該 task 的工作物，不消耗 retry 額度
-
-詳見 [`anti-rubber-stamp.md`](./skills/teamwork-leader-workflow/references/anti-rubber-stamp.md)（Rule 0 / 0.5 / 2）+ [`stage-runbook.md`](./skills/teamwork-leader-workflow/references/stage-runbook.md) §EXECUTING step 7a。
-
-### 變更控制（CCB）
-
-- **CCB-Light** — 範圍小、可逆的 knob 微調（threshold ±2、selector_score ±0.5）
-- **CCB-Heavy** — formula 結構性改變、kill-switch 啟動、charter milestone 變動
-
-詳見 [`pmp-ccb.md`](./skills/teamwork-leader-workflow/references/pmp-ccb.md)。
-
-### Role discipline references（v0.1.4）
-
-Plugin 自帶 `references/discipline/*.md` 6 份 portable defaults，作為各 PM 角色的工作紀律基線：
-
-- **RD PM**：surgical-change / simplicity / typescript-discipline / testing-discipline / styling-discipline / mezzanine-discipline (Mezzanine 專案才適用)
-- **QA PM**：testing-discipline / surgical-change
-- **UX PM**：styling-discipline / mezzanine-discipline / surgical-change
-- **PO PM**：simplicity / surgical-change
-
-每份 discipline 檔是 plugin 的 portable default。專案的 `CLAUDE.md` 若有不同 convention，依 Claude Code standard precedence（project instructions > plugin guidance）自動優先 — 此 override 不依賴 plugin 內建 loading logic，而是由 Claude Code 的 instruction priority 機制處理。
-
-Mezzanine / TypeScript discipline 在非適用專案自動 skip（檔尾標註）。
-
-詳見 [`skills/teamwork-leader-workflow/references/discipline/`](./skills/teamwork-leader-workflow/references/discipline/)。
-
-### Dispatch-level schema validation（v0.1.3）
-
-PM 回傳的 11 個 mandatory fields（per `dispatch-header.md` §Return contract）在寫入 audit-trail 之前由 TeamLead parse-time validate：
-
-- **PASS** → 正常進 anti-rubber-stamp checklist
-- **INCOMPLETE** → 自動 re-dispatch 一次（**獨立 retry pool**，不消耗 step-review 或 Mini Gate 額度）
-- **第二次 INCOMPLETE** → ESCALATED with `schema_validation_status: rejected_and_escalated`
-
-`schema_enforcement_mode` knob（`strict` / `warn` / `off`）支援 kill-switch；非 `strict` 需 CCB-Heavy。詳見 [`docs/v0.1.3-rollback.md`](./docs/v0.1.3-rollback.md)。
-
-## 專案結構
+### 專案結構
 
 ```
 teamwork-leader/
@@ -179,33 +90,70 @@ teamwork-leader/
 ├── commands/teamwork-leader.md    # /teamwork-leader slash command
 ├── skills/teamwork-leader-workflow/
 │   ├── SKILL.md                   # TeamLead 操作 skill
-│   └── references/                # 11 個 reference 文件
-│       ├── stage-runbook.md       # 狀態機（PLANNING→EXECUTING→GATING→AWAITING_CEO）
-│       ├── dispatch-header.md     # PM dispatch / return contract
-│       ├── anti-rubber-stamp.md   # Rule 0/0.5/2，trust_tier，anti-gaming
-│       ├── three-gates.md         # CEO Gate / Stage Gate / Mini Gate
-│       ├── progress-md-schema.md  # PROGRESS.md + audit-trail.jsonl 結構
-│       ├── pmp-ccb.md             # CCB-Light/Heavy 觸發條件
-│       ├── pmp-wbs.md             # rolling-wave WBS
-│       ├── pmp-lessons-learned.md # ProjectClose lessons
-│       ├── reuse-map.md           # 與 user rules / 其他 skill 的關係
-│       ├── schema-migration.md    # PROGRESS.md schema 遷移
-│       └── value-driven.md        # value criteria 驗證
-├── agents/                        # 5 個 PM agent
-│   ├── po-pm.md / rd-pm.md / qa-pm.md / ux-pm.md / ad-hoc-pm.md
-├── templates/                     # 8 個輸出 template
-│   ├── PROGRESS.md.tpl / budget-proposal.md.tpl / project-close.md.tpl
-│   ├── ccb-light.md.tpl / ccb-heavy.md.tpl / ccb-log.md.tpl
-│   ├── stage-report.md.tpl / tasks.md.tpl
-├── scripts/gate-requirement-runner.sh  # Gate_Requirement helper
-└── docs/
-    ├── phase-3-dogfood.md         # Phase 3 dogfood 計畫
-    └── specs/2026-05-01-teamwork-leader-design.md  # 設計 spec（rev v3）
+│   └── references/                # 12 份 reference + discipline/ 子目錄
+├── agents/                        # 5 個 PM agent（po/rd/qa/ux/ad-hoc）
+├── templates/                     # 9 份輸出 template（PROGRESS / budget / CCB / stage-report …）
+├── hooks/                         # PreCompact / SessionStart / Stop hook
+├── lib/                           # baton-writer / gate-lock / handoff-builder / notifier
+├── scripts/                       # daemon.py / install.py / gate-requirement-runner.sh
+├── tools/                         # 量測與輔助腳本
+└── docs/specs/                    # 設計 spec
 ```
+
+## 方法論
+
+流程框架沿用 **PMP（Project Management Professional）** 慣例，並疊加 multi-agent 驗證層：
+
+- **Rolling-wave WBS** — stage 以 milestone 粒度規劃，當前 stage 細化到 task 粒度（[`pmp-wbs.md`](./skills/teamwork-leader-workflow/references/pmp-wbs.md)）
+- **Stage Gate** — 每個 stage 收尾須通過驗證才前進，不可跳過
+- **RAID Register** — Risk / Assumption / Issue / Dependency 持續追蹤於 `PROGRESS.md`
+- **Change Control（CCB）** — 換方向走正式變更控制（見下）
+- **Lessons Learned** — ProjectClose 收尾的回溯協定（[`pmp-lessons-learned.md`](./skills/teamwork-leader-workflow/references/pmp-lessons-learned.md)）
+
+### 三道驗證閘
+
+| Gate | 範圍 | 觸發 | 主導者 |
+|---|---|---|---|
+| **CEO_Gate** | 整個 stage | 每 stage 收尾 | CEO（人類）批准 |
+| **Stage Gate** | PM 工作物 | PM dispatch 結束 | PM 自行 closure |
+| **Mini Gate_Forward** | 單一 task 的工作物 | per-task divergence proxy 觸發 | TeamLead 自決 |
+
+Gate 一律輸出結構化 classifier（`verdict` / `root_cause` / `evidence` / `dod_status`）；parse 失敗則 re-dispatch 一次，再失敗即 escalate CEO。詳見 [`three-gates.md`](./skills/teamwork-leader-workflow/references/three-gates.md)。
+
+### Anti-rubber-stamp 驗證
+
+PM 回報附結構化驗證 meta block，TeamLead 依訊號自動決定採樣深度：
+
+- **每次 dispatch** — 依 PM 自評與實際結果的 divergence 分級 Aligned / Watch / Escalate
+- **跨 stage** — 每 PM 維持 rolling 3-stage 信任分級（restricted / standard / trusted）+ anti-gaming 偵測
+- **PLAN_AUDIT** — Opus 計劃審查者套用 Rule 7 anti-self-skip：禁止用 `"skip"` / `"none"` 等空值填 `suggested_fix` 來假性 rubber-stamp 計劃
+
+詳見 [`anti-rubber-stamp.md`](./skills/teamwork-leader-workflow/references/anti-rubber-stamp.md) 與 [`plan-audit-rubric.md`](./skills/teamwork-leader-workflow/references/plan-audit-rubric.md)。
+
+### 變更控制（CCB）
+
+- **CCB-Light** — 範圍小、可逆的 knob 微調，session 內由 PO 更新 docs + ccb-log
+- **CCB-Heavy** — formula 結構性改變、kill-switch、charter milestone 變動，須 CEO_Gate 批准
+
+詳見 [`pmp-ccb.md`](./skills/teamwork-leader-workflow/references/pmp-ccb.md)。
+
+## 核心功能
+
+### Auto-Resume Daemon
+
+Plugin 內建一個 macOS launchd daemon，補完 cross-session resume 的自動化路徑。Claude Code AutoCompact / `/clear` / 主動 pause 後，daemon 偵測 baton 狀態並自動 invoke `claude --resume`，免人工介入。安裝具 degraded-mode 容錯 — 在受限主機或非 macOS 環境會降級為手動模式並繼續，核心 TeamLead 流程不受影響。
+
+### Dispatch schema validation
+
+PM 回報的 mandatory fields 在寫入 audit-trail 前由 TeamLead parse-time validate；不完整則自動 re-dispatch 一次（獨立 retry pool），再失敗即 escalate。
+
+### Role discipline references
+
+`references/discipline/` 提供 6 份 portable 工作紀律（surgical-change / simplicity / typescript / testing / styling / mezzanine），作為各 PM 角色的紀律基線。專案自身的 `CLAUDE.md` 若有不同 convention，依 Claude Code 的 instruction precedence 自動優先。
 
 ## 配置（CEO_Gate_0 knobs）
 
-在 BudgetProposal 階段，CEO 可調整以下 knob：
+BudgetProposal 階段，CEO 可調整：
 
 | Knob | 預設 | 說明 |
 |---|---|---|
@@ -214,41 +162,20 @@ teamwork-leader/
 | `retry_cap_per_step` | 1 | 每 step 重試上限 |
 | `parallel_pm_limit` | 2（hard limit 4） | 平行 PM 上限 |
 | `gate_requirement_mode` | final stage only | Gate_Requirement 觸發時機 |
-| `milestones` | derived from stage decomposition | 每 stage 的 milestone 清單 |
 | `verify_policy` | `default` | 採樣深度（`minimal-per-dispatch` / `default` / `broad`） |
-| `trust_tier_mode` | `enabled` | trust_tier 信任分級啟用（disable 走 CCB-Heavy） |
-| `kmr_mode` | `enabled` | per-task Mini Gate 啟用（disable 走 CCB-Heavy） |
+| `trust_tier_mode` | `enabled` | trust_tier 信任分級（disable 走 CCB-Heavy） |
+| `kmr_mode` | `enabled` | per-task Mini Gate（disable 走 CCB-Heavy） |
 
 完整 knob 表見 [`templates/budget-proposal.md.tpl`](./templates/budget-proposal.md.tpl)。
 
-## 狀態與限制
-
-**Charter 完成記錄**：
-
-- **v0.1.6 Rule 7 ship**（self-dogfood）— PLAN_AUDIT anti-self-skip enforcement，自指 Opus dogfood 驗證
-- **v0.1.7 Auto-Resume Daemon**（multi-charter）— Phase 1+2 daemon ship；degraded-mode acceptance (d) close（I-023-M1 measurement deferred to v0.1.9）
-- **v0.1.8 measurement-deferral codification**（doc-only）— design.md §7 (a)–(d) shipping constraint codified；anti-scope-creep mandate held end-to-end
-- **v0.1.9 I-023-M1 measurement closure**（self-dogfood）— GHA macos-14 arm64 cold p50=15.5s / warm p50=5.3s（≤30s ship gate satisfied）；FROZEN spec held end-to-end；M-2/M-4 deviation registration discipline；2× mid-stage Opus advisor pattern
-- **v0.1.10 daemon FROZEN-spec deltas + hook hardening D-1/2/3**（2026-05-10）— I-061/I-064/I-065/I-071 closed；hook compound-injection attack surface eliminated；measurement protocol C-4 corrected；AC-9 Python ≥3.10 hard gate；AC-7 real-claude E2E measurement PROVEN-BLOCKED on both host classes → deferred to v0.1.11 per CCB-Heavy revise_charter；production usage signal confirmed (patent-examiner-plugin + BeiliSystem)
-- **v0.1.11 real-claude integration ship**（2026-05-10）— AC-1..AC-6 all delivered (0 demote vs v0.1.10 AC-7 PROVEN-BLOCKED). 3-charter host-class blocker止血 via patch-plist-python3.py workaround; v0.1.12 mandatory HIGH RAID-V11-install-lifecycle-python3-path for structural fix. Stage 3 Phase B local macOS real-launchd E2E: cold 12.099s / warm 11.091s SESSION_RESUMED ≤30s ship gate. Per-task Sonnet review + Stage-close Opus review discipline established (CEO directive). PM dispatch reliability findings transparently disclosed (CCBL-PO-D4 dual deviations + RAID-V12-pm-dispatch-retry-grounding).
-- **首次外部 dogfood**：BeiliSystem PR #30/#34（3 stages, 25 dispatches, 5 real defects caught, 0 false positives, 2026-05-02）
-
-**仍待強化**：
-
-- **多 project 校準**：thresholds 仍是 seed values，需 ≥2 unrelated projects evidence 才能進 Phase 4 CGR threshold calibration
-- **N≥2 hard gate**：`long-batched-dispatch-warning`（v0.2.0 候選）僅 1 truncation case，必須 N≥2 才能 ship interruptive guard
-- **CGR（Calibration Governance Review）pending**：需 ≥3 stages clean data after v0.1.3 才啟動 round 1
-- **v0.1.12 carry-forward RAIDs（8 total）**：RAID-V11-install-lifecycle-python3-path（sev:HIGH MANDATORY — install.py auto-detect python3 ≥3.10 + auto-inject claude binary PATH；escalated from MED）+ RAID-V12-pm-dispatch-retry-grounding（sev:MED）+ RAID-V12-poll-loop-stress-test（sev:MED）+ RAID-V12-measurement-diversity（sev:MED）+ RAID-V11-ccb-token-cost（sev:MED；carry from v0.1.10）+ RAID-V12-cr-drafting-discipline（sev:LOW）+ RAID-V12-restore-prompt-allowlist-doc（sev:LOW）+ RAID-V12-deferred-bookkeeping-pre-tag-mandate（sev:LOW）
-
 ## 文件導引
 
-從哪裡開始讀：
-
-1. **使用者** → 直接跑 `/teamwork-leader` 試用，看 [`commands/teamwork-leader.md`](./commands/teamwork-leader.md) 了解 boot sequence
-2. **想了解設計動機** → [`docs/specs/2026-05-01-teamwork-leader-design.md`](./docs/specs/2026-05-01-teamwork-leader-design.md)（1079 行完整 spec）
-3. **想魔改 / 貢獻** → [`skills/teamwork-leader-workflow/SKILL.md`](./skills/teamwork-leader-workflow/SKILL.md) + 11 個 reference
-4. **想理解三道 gate** → [`skills/teamwork-leader-workflow/references/three-gates.md`](./skills/teamwork-leader-workflow/references/three-gates.md)
-5. **想用 anti-rubber-stamp 機制** → [`skills/teamwork-leader-workflow/references/anti-rubber-stamp.md`](./skills/teamwork-leader-workflow/references/anti-rubber-stamp.md)
+| 想了解 | 從這裡開始 |
+|---|---|
+| 怎麼用 | 直接跑 `/teamwork-leader`；[`commands/teamwork-leader.md`](./commands/teamwork-leader.md) 看 boot sequence |
+| 設計動機 | [`docs/specs/2026-05-01-teamwork-leader-design.md`](./docs/specs/2026-05-01-teamwork-leader-design.md) |
+| 魔改 / 貢獻 | [`SKILL.md`](./skills/teamwork-leader-workflow/SKILL.md) + `references/` 各文件 |
+| 版本變更 | [CHANGELOG.md](./CHANGELOG.md) |
 
 ## License
 
@@ -256,21 +183,5 @@ MIT — 見 [LICENSE](./LICENSE)。
 
 ## Acknowledgements
 
-- 設計概念部分啟發自 KL-divergence-based triggering 與 capacity-saturation 原則
 - 流程框架沿用 PMP（Project Management Professional）的 stage / gate / CCB / RAID / Lessons Learned 慣例
 - 使用 Claude Code 的 plugin / skill / agent / command / hook 架構
-
-## Roadmap
-
-- [x] 初次外部 dogfood 完成（BeiliSystem PR #30/#34, 3 stages / 25 dispatches, 2026-05-02）
-- [x] 確認 `verification_self_redundancy` variance（8 distinct values 0–9, dominant `3` 占 48%）
-- [x] v0.1.3 schema validation enforcement ship（dogfood 觀察到 12% incomplete → 強化 audit-trail logging + retry pool 隔離）
-- [x] v0.1.6 Rule 7 anti-self-skip ship（self-dogfood）
-- [x] v0.1.7 Auto-Resume Daemon Phase 1+2 ship（degraded-mode acceptance (d)）
-- [x] v0.1.8 measurement-deferral 形式化（design.md §7 (a)–(d) codification）
-- [x] **v0.1.9 I-023-M1 measurement closure**（GHA macos-14 cold p50=15.5s / warm p50=5.3s ≤30s ship gate）
-- [x] **v0.1.10 daemon FROZEN-spec changes + hook hardening D-1/2/3 + measurement protocol corrections**（2026-05-10）— AC-7 real-claude E2E measurement deferred to v0.1.11 per CCBH-v0.1.10-AC7-DEMOTE-V0.1.11
-- [x] **v0.1.11 real-claude integration ship + 3-charter host-class blocker止血**（2026-05-10）— AC-1..AC-6 all delivered; cold 12.099s / warm 11.091s SESSION_RESUMED on local Mac (≤30s gate); patch-plist-python3.py workaround + v0.1.12 mandatory HIGH structural fix
-- [ ] 收集 ≥2 unrelated projects' evidence → Phase 4 CGR round 1（threshold 校準）
-- [ ] 達 N≥2 hard gate 後評估 v0.2.0 long-batched dispatch interruptive guard
-- [ ] 視需要加入 PM-side adaptive verification depth（目前 sampling 全由 TeamLead 決定）
