@@ -138,6 +138,7 @@ Reviewer dispatches (PlanAudit Opus, step-review Sonnet) auto-DISABLED when ANY:
 | `progress-md-schema.md` | PROGRESS.md required sections + size discipline |
 | `reuse-map.md` | Mapping to existing skills / rules |
 | `anti-rubber-stamp.md` | 5 verification rules + sampling policy |
+| `plan-audit-rubric.md` | Rule 7 anti-self-skip — authoritative procedure for the PLAN_AUDIT Opus reviewer |
 | `value-driven.md` | Value Hypothesis + DoD criteria |
 | `schema-migration.md` | Existing PROGRESS.md collision handling |
 
